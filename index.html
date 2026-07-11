@@ -69,6 +69,28 @@
         #toggle-2d-sidebar { position: absolute; top: 50%; right: 0; transform: translateY(-50%); width: 24px; height: 60px; background: var(--sidebar-bg); border: 1px solid var(--border-color); border-right: none; border-radius: 8px 0 0 8px; color: var(--text-color); cursor: pointer; display: none; align-items: center; justify-content: center; z-index: 21; box-shadow: -4px 0 10px rgba(0,0,0,0.3); }
         #toggle-2d-sidebar:hover { color: var(--accent-color); }
 
+        /* Botones de navegación entre perfiles */
+        .btn-profile-nav {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid #444;
+            color: var(--text-color);
+            border-radius: 4px;
+            width: 26px;
+            height: 26px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            transition: background 0.2s, color 0.2s;
+            user-select: none;
+        }
+        .btn-profile-nav:hover {
+            background: var(--accent-color);
+            color: #000;
+            border-color: var(--accent-color);
+        }
+
         #tooltip-2d { position: absolute; background: rgba(15, 15, 15, 0.95); border: 1px solid var(--border-color); padding: 10px; border-radius: 6px; pointer-events: none; font-size: 12px; font-family: monospace; display: none; z-index: 100; color: #ddd; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
         #tooltip-2d span.val { color: var(--accent-color); font-weight: bold; }
 
@@ -154,10 +176,8 @@
             #view-2d-header { padding: 10px; font-size: 11px; }
             #active-profile-title { max-width: 100px; overflow: hidden; text-overflow: ellipsis; }
             
-            /* Ocultamos por completo el D-Pad en el móvil */
             #dpad-container { display: none !important; }
             
-            /* Reubicación vertical para evitar que barra del navegador móvil corte el cartel */
             #laser-info { 
                 bottom: 85px; 
                 right: 15px; 
@@ -182,8 +202,9 @@
 <body>
 
     <div id="main-wrapper">
-        <div id="sidebar">
-            <div id="toggle-sidebar" title="Ocultar/Mostrar panel">◀</div>
+        <!-- Menú lateral colapsado por defecto -->
+        <div id="sidebar" class="collapsed">
+            <div id="toggle-sidebar" title="Ocultar/Mostrar panel">▶</div>
             <div id="sidebar-content">
                 <h1>Visor Geofísico</h1>
                 
@@ -236,7 +257,13 @@
                         <button id="btn-toggle-2d" title="Ocultar/Mostrar panel 2D">▼</button>
                         <span>SECCIÓN GEOFÍSICA (2D)</span>
                     </div>
-                    <span id="active-profile-title" style="color: var(--accent-color); font-size:12px;">[Ninguno seleccionado]</span>
+
+                    <!-- Navegación directa entre perfiles mediante flechitas -->
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <button id="btn-prev-profile" class="btn-profile-nav" title="Perfil Anterior">◀</button>
+                        <span id="active-profile-title" style="color: var(--accent-color); font-size:12px; font-weight:bold;">[Ninguno]</span>
+                        <button id="btn-next-profile" class="btn-profile-nav" title="Perfil Siguiente">▶</button>
+                    </div>
                 </div>
                 
                 <!-- Botones flotantes de zoom para 2D -->
@@ -272,6 +299,7 @@
         let terrenoCrudoData = null; 
         let nombreArchivoTerreno = null; 
         const perfilesCargados = {}; 
+        const perfilesRawData = {}; 
         let centerOffset = null; 
         let activeProfileName = null; 
 
@@ -286,7 +314,6 @@
         let cursorMundoS = 0, cursorMundoZ = 0;
         let isCursorActive = false;
 
-        // Variables de navegación y zoom para el lienzo 2D
         let zoom2D = 1.0;
         let panX = 0;
         let panY = 0;
@@ -334,7 +361,7 @@
             gridHelper.rotation.x = Math.PI / 2;
             scene.add(gridHelper);
 
-            // Marcador láser 3D clásico (Únicamente la esfera roja brillante)
+            // Esfera láser 3D clásica brillante sin oclusión
             const sg = new THREE.SphereGeometry(1, 16, 16);
             const sm = new THREE.MeshBasicMaterial({color: 0xff1744, depthTest: false});
             laserMesh = new THREE.Mesh(sg, sm);
@@ -344,13 +371,11 @@
 
             vincularEventosUI();
             animate();
-            resize2DCanvas();
+            setTimeout(onWindowResize, 100);
 
-            // EJECUTAMOS LA AUTOCARGA AL INICIAR
             cargarDatosPreestablecidos();
         }
 
-        // FUNCIÓN DE AUTOCARGA DINÁMICA CONFIGURADA PARA TUS 5 ARCHIVOS
         async function cargarDatosPreestablecidos() {
             try {
                 const resTerreno = await fetch('terreno_web.json');
@@ -395,30 +420,19 @@
             setTimeout(onWindowResize, 310);
         }
 
-        function destacarPerfilEn3D(nombreActivo) {
-            // Recorremos los perfiles cargados y atenuamos los que no corresponden al perfil activo
-            Object.keys(perfilesCargados).forEach(key => {
-                const meshes = perfilesCargados[key];
-                const esActivo = (key === nombreActivo);
-                meshes.forEach(mesh => {
-                    if (mesh.material) {
-                        mesh.material.transparent = true;
-                        mesh.material.opacity = esActivo ? 1.0 : 0.15;
-                    }
-                });
-            });
-        }
-
-        function restaurarPerfiles3D() {
-            Object.keys(perfilesCargados).forEach(key => {
-                const meshes = perfilesCargados[key];
-                meshes.forEach(mesh => {
-                    if (mesh.material) {
-                        mesh.material.transparent = false;
-                        mesh.material.opacity = 1.0;
-                    }
-                });
-            });
+        function cambiarPerfilSiguiente(direccion) {
+            const nombres = Object.keys(perfilesRawData);
+            if (nombres.length === 0) return;
+            let idx = nombres.indexOf(activeProfileName);
+            if (idx === -1) {
+                idx = 0;
+            } else {
+                idx = (idx + direccion + nombres.length) % nombres.length;
+            }
+            const nuevoNombre = nombres[idx];
+            if (nuevoNombre && perfilesRawData[nuevoNombre]) {
+                activarPerfil2D(nuevoNombre, perfilesRawData[nuevoNombre]);
+            }
         }
 
         function vincularEventosUI() {
@@ -436,6 +450,10 @@
 
             bindEvent('btn-toggle-2d', 'click', toggle2DPanel);
             bindEvent('toggle-2d-sidebar', 'click', toggle2DPanel);
+
+            // Botones de cambio directo de perfil
+            bindEvent('btn-prev-profile', 'click', () => cambiarPerfilSiguiente(-1));
+            bindEvent('btn-next-profile', 'click', () => cambiarPerfilSiguiente(1));
 
             bindEvent('chk-terreno', 'change', (e) => { if (terrenoMesh) terrenoMesh.visible = e.target.checked; });
             
@@ -498,7 +516,6 @@
 
             window.addEventListener('resize', onWindowResize);
             
-            // Sensibilidad calibrada para zoom táctil y botoneras flotantes
             const isMobile = window.innerWidth <= 768;
             const factorBoton = isMobile ? 1.2 : 1.3;
 
@@ -528,7 +545,6 @@
                 let touchStartDist = 0;
                 let isPinchZooming = false;
 
-                // Zoom por rueda de ratón en escritorio
                 canvas2D.addEventListener('wheel', (e) => {
                     if (!dataProyeccion2D) return;
                     e.preventDefault();
@@ -565,7 +581,6 @@
                             reconstruirCacheScreen();
                         }
                     } else {
-                        // Cursor flotante en Desktop
                         cursorX = curX;
                         cursorY = curY;
                         isCursorActive = true;
@@ -577,7 +592,7 @@
                     if (isDragging2D) {
                         isDragging2D = false;
                         if (!dragMoved) {
-                            triggerCursorClick(); // Clic estático rápido fija punto
+                            triggerCursorClick();
                         }
                     }
                 });
@@ -589,7 +604,6 @@
                     dibu2D(); 
                 });
 
-                // Zoom multitáctil balanceado (No lento, fluido y natural)
                 canvas2D.addEventListener('touchstart', (e) => {
                     if (!dataProyeccion2D) return;
                     const rect = canvas2D.getBoundingClientRect();
@@ -621,7 +635,6 @@
                         const currentDist = Math.hypot(dx, dy);
                         if (touchStartDist > 0) {
                             const factor = currentDist / touchStartDist;
-                            // COEFICIENTE DE AMORTIGUACIÓN OPTIMIZADO PARA PRECISIÓN NATURAL (0.65)
                             const dampFactor = 1 + (factor - 1) * 0.65; 
                             zoom2D = Math.max(0.5, Math.min(30, zoom2D * dampFactor));
                             touchStartDist = currentDist;
@@ -647,7 +660,6 @@
                     if (isDragging2D) {
                         isDragging2D = false;
                         if (!dragMoved && !isPinchZooming) {
-                            // Toque táctil rápido fija punto
                             const rect = canvas2D.getBoundingClientRect();
                             if (e.changedTouches.length > 0) {
                                 cursorX = e.changedTouches[0].clientX - rect.left;
@@ -904,6 +916,8 @@
             if (perfilesCargados[nombreArchivo]) { perfilesCargados[nombreArchivo].forEach(m => { scene.remove(m); liberarMemoriaMesh(m); }); }
             if (data.length > 0 && data[0].vertices && data[0].vertices.length > 0) obtenerOffset(data[0].vertices);
 
+            perfilesRawData[nombreArchivo] = data; // Guardamos datos puros para cambio directo por flechitas
+
             const meshes = [];
             const bboxGlobal = new THREE.Box3();
 
@@ -924,6 +938,7 @@
                     bboxGlobal.union(geometry.boundingBox);
                 }
 
+                // Renderizado 3D sólido original (sin alterar opacidad para ver a través del terreno)
                 const mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ color: capa.color, side: THREE.DoubleSide }));
                 scene.add(mesh); meshes.push(mesh);
             });
@@ -952,7 +967,6 @@
 
             activeProfileName = nombre;
             
-            // Reiniciamos navegación de zoom y pan al activar nuevo perfil
             zoom2D = 1.0;
             panX = 0;
             panY = 0;
@@ -971,9 +985,6 @@
             document.getElementById('laser-info').style.display = 'none';
             document.getElementById('dpad-container').style.display = 'none';
             isCursorActive = false;
-
-            // Iluminamos el perfil actual en el espacio tridimensional y atenuamos el resto
-            destacarPerfilEn3D(nombre);
 
             await new Promise(r => setTimeout(r, 10));
 
@@ -1026,8 +1037,6 @@
             });
 
             const rangeS = globalMaxS - globalMinS || 1;
-            
-            // Redimensionado nativo del marcador esférico para conservar la proporción
             laserMesh.scale.setScalar(Math.max(rangeS * 0.015, 14)); 
 
             minZ_grid = Math.floor(minZ / 50) * 50;
@@ -1118,7 +1127,6 @@
             const logicalW = canvas2D.width / dpr;
             const logicalH = canvas2D.height / dpr;
             
-            // MARGEN DE AJUSTE ADAPTATIVO EN CELULARES PARA PREVENIR TAPAR CON EL DEDO
             const isMobile = window.innerWidth <= 768;
             const paddingLeft = 60;
             const paddingRight = 60;
@@ -1133,11 +1141,9 @@
             const rngS = Math.max(dataProyeccion2D.maxS - dataProyeccion2D.minS, 1);
             const rngZ = Math.max(dataProyeccion2D.maxZ_grid - dataProyeccion2D.minZ_grid, 1);
 
-            // APLICAMOS EL VALOR DEL ZOOM DE LA VISTA 2D
             const baseEscala = Math.min(w_canvas / rngS, h_canvas / rngZ);
             escalaGlobal = baseEscala * zoom2D;
             
-            // APLICAMOS LA TRASLACIÓN CON LOS DESPLAZAMIENTOS (PAN)
             transX = paddingLeft + (w_canvas - rngS * escalaGlobal) / 2 + panX;
             transY = paddingTop + (h_canvas + rngZ * escalaGlobal) / 2 + panY; 
 
@@ -1215,8 +1221,6 @@
             const isMobile = window.innerWidth <= 768;
             
             if (isMobile) {
-                // EN CELULARES NO SE DIBUJA LUPA PARA PREVENIR OBSTRUIR LA SELECCIÓN
-                // Marcador simple con guías para lectura cómoda
                 ctx2D.save();
                 ctx2D.scale(dpr, dpr);
 
@@ -1233,7 +1237,6 @@
                 return;
             }
 
-            // MODO COMPUTADORA: DIBUJO TRADICIONAL DE LUPA CON DETALLE AMPLIADO
             ctx2D.save();
             ctx2D.scale(dpr, dpr);
 
@@ -1312,7 +1315,6 @@
             const isMobile = window.innerWidth <= 768;
 
             if (isMobile) {
-                // FORMATO COMPACTO ORIENTADO EXCLUSIVAMENTE A LA PROFUNDIDAD DESDE EL TERRENO AL PUNTO
                 laserInfo.innerHTML = `
                     <div style="color:var(--danger-color); font-weight:bold; font-size:10px; margin-bottom:2px; letter-spacing:0.5px;">📍 PUNTO SELECCIONADO</div>
                     <div style="font-size:12px; font-weight:bold; line-height:1.2;">Profundidad al Terreno:<br><span style="color:#81c784; font-size:15px; font-weight:900;">${profTerreno}</span></div>
@@ -1357,15 +1359,14 @@
             div.querySelector('.btn-del').addEventListener('click', () => {
                 if (tipo === 'terreno' && terrenoMesh) { scene.remove(terrenoMesh); liberarMemoriaMesh(terrenoMesh); terrenoMesh = null; terrenoCrudoData = null; nombreArchivoTerreno = null; } 
                 else if (tipo === 'perfil' && perfilesCargados[nombre]) {
-                    perfilesCargados[nombre].forEach(mesh => { scene.remove(mesh); liberarMemoriaMesh(mesh); }); delete perfilesCargados[nombre];
+                    perfilesCargados[nombre].forEach(mesh => { scene.remove(mesh); liberarMemoriaMesh(mesh); }); delete perfilesCargados[nombre]; delete perfilesRawData[nombre];
                     if (activeProfileName === nombre) {
                         activeProfileName = null; dataProyeccion2D = null; currentRenderId++; isProcessing2D = false;
                         clickedPoint2D = null; laserMesh.visible = false; document.getElementById('laser-info').style.display = 'none';
                         document.getElementById('dpad-container').style.display = 'none'; isCursorActive = false;
-                        document.getElementById('active-profile-title').innerText = "[Ninguno seleccionado]";
+                        document.getElementById('active-profile-title').innerText = "[Ninguno]";
                         ctx2D.fillStyle = '#0a0a0a'; ctx2D.fillRect(0, 0, canvas2D.width, canvas2D.height);
                     }
-                    restaurarPerfiles3D();
                 }
                 div.remove();
                 if (container.children.length === 0) container.innerHTML = `<div id="empty-list-msg" style="font-size: 12px; color: #555; text-align: center; padding: 15px; border: 1px dashed #333; border-radius: 6px;">Ningún archivo cargado</div>`;
