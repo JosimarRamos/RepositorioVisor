@@ -132,14 +132,26 @@
             #view-3d { border-right: none; border-bottom: 2px solid var(--border-color); }
             #sidebar { position: absolute; height: 100vh; height: 100dvh; left: 0; top: 0; max-width: 85vw; z-index: 1000; box-shadow: 2px 0 15px rgba(0,0,0,0.5); }
             #sidebar.collapsed { width: 0; border-right: none; box-shadow: none; }
-            #sidebar-content { padding-bottom: 120px !important; } /* Margen extra para ver Perfil 3 y 4 sin problemas */
+            #sidebar-content { padding-bottom: 120px !important; }
             #btn-toggle-2d { transform: rotate(0deg); }
             #main-wrapper.is-2d-collapsed #view-2d { flex: 0 0 44px !important; height: 44px !important; overflow: hidden; }
             #main-wrapper.is-2d-collapsed #btn-toggle-2d { transform: rotate(180deg); }
             #view-2d-header { padding: 10px; font-size: 11px; }
             #active-profile-title { max-width: 100px; overflow: hidden; text-overflow: ellipsis; }
-            #dpad-container { bottom: 10px; left: 10px; transform: scale(0.8); transform-origin: bottom left; }
-            #laser-info { bottom: 10px; right: 10px; padding: 10px; font-size: 11px; }
+            
+            /* Ocultamos por completo el D-Pad en el móvil */
+            #dpad-container { display: none !important; }
+            
+            /* Reubicación y optimización de la caja de información en celular */
+            #laser-info { 
+                bottom: 25px; 
+                right: 20px; 
+                padding: 10px 12px; 
+                font-size: 11px; 
+                max-width: 170px;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.6);
+                border-radius: 6px;
+            }
         }
     </style>
     <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
@@ -307,9 +319,23 @@
             gridHelper.rotation.x = Math.PI / 2;
             scene.add(gridHelper);
 
+            // Marcador láser 3D de alta visibilidad compuesto por esfera y pilar vertical
+            laserMesh = new THREE.Group();
+
             const sg = new THREE.SphereGeometry(1, 16, 16);
-            const sm = new THREE.MeshBasicMaterial({color: 0xff3333, depthTest: false});
-            laserMesh = new THREE.Mesh(sg, sm);
+            const sm = new THREE.MeshBasicMaterial({color: 0xff1744, depthTest: false});
+            const sphere = new THREE.Mesh(sg, sm);
+            sphere.name = "sphere_marker";
+            laserMesh.add(sphere);
+
+            const lineGeom = new THREE.BufferGeometry().setFromPoints([
+                new THREE.Vector3(0, 0, -3000),
+                new THREE.Vector3(0, 0, 3000)
+            ]);
+            const lineMat = new THREE.LineBasicMaterial({color: 0xff1744, depthTest: false, linewidth: 2});
+            const pillar = new THREE.Line(lineGeom, lineMat);
+            laserMesh.add(pillar);
+
             laserMesh.renderOrder = 999;
             laserMesh.visible = false;
             scene.add(laserMesh);
@@ -444,14 +470,17 @@
 
             window.addEventListener('resize', onWindowResize);
             
-            // Eventos de control de Zoom flotantes
+            // Ajustes finos de velocidad de zoom para botones flotantes en móviles
+            const isMobile = window.innerWidth <= 768;
+            const factorBoton = isMobile ? 1.15 : 1.3;
+
             bindEvent('btn-zoom-in', 'click', () => {
-                zoom2D = Math.min(20, zoom2D * 1.3);
+                zoom2D = Math.min(30, zoom2D * factorBoton);
                 reconstruirCacheScreen();
                 if (isCursorActive) updateCursor2D();
             });
             bindEvent('btn-zoom-out', 'click', () => {
-                zoom2D = Math.max(0.5, zoom2D / 1.3);
+                zoom2D = Math.max(0.5, zoom2D / factorBoton);
                 reconstruirCacheScreen();
                 if (isCursorActive) updateCursor2D();
             });
@@ -476,7 +505,7 @@
                     if (!dataProyeccion2D) return;
                     e.preventDefault();
                     const zoomFactor = e.deltaY < 0 ? 1.15 : 0.85;
-                    zoom2D = Math.max(0.5, Math.min(20, zoom2D * zoomFactor));
+                    zoom2D = Math.max(0.5, Math.min(30, zoom2D * zoomFactor));
                     reconstruirCacheScreen();
                     if (isCursorActive) updateCursor2D();
                 }, { passive: false });
@@ -508,7 +537,7 @@
                             reconstruirCacheScreen();
                         }
                     } else {
-                        // Movimiento del cursor flotante (Desktop)
+                        // Cursor flotante (Desktop)
                         cursorX = curX;
                         cursorY = curY;
                         isCursorActive = true;
@@ -520,7 +549,7 @@
                     if (isDragging2D) {
                         isDragging2D = false;
                         if (!dragMoved) {
-                            triggerCursorClick(); // Clic estático -> Fija punto
+                            triggerCursorClick(); // Clic rápido -> Fija punto
                         }
                     }
                 });
@@ -532,7 +561,7 @@
                     dibu2D(); 
                 });
 
-                // Soporte táctil móvil avanzado (Pinch-to-zoom y Arrastre de mapa)
+                // Soporte táctil móvil amortiguado (Pinch-to-zoom mucho más suave)
                 canvas2D.addEventListener('touchstart', (e) => {
                     if (!dataProyeccion2D) return;
                     const rect = canvas2D.getBoundingClientRect();
@@ -564,7 +593,9 @@
                         const currentDist = Math.hypot(dx, dy);
                         if (touchStartDist > 0) {
                             const factor = currentDist / touchStartDist;
-                            zoom2D = Math.max(0.5, Math.min(20, zoom2D * (factor > 1 ? 1.04 : 0.96)));
+                            // COEFICIENTE DE AMORTIGUACIÓN PARA EL ZOOM TÁCTIL (HACE EL ZOOM MUCHO MÁS LENTO Y CONTROLABLE)
+                            const dampFactor = 1 + (factor - 1) * 0.15; 
+                            zoom2D = Math.max(0.5, Math.min(30, zoom2D * dampFactor));
                             touchStartDist = currentDist;
                             reconstruirCacheScreen();
                         }
@@ -588,7 +619,7 @@
                     if (isDragging2D) {
                         isDragging2D = false;
                         if (!dragMoved && !isPinchZooming) {
-                            // Un toque estático rápido -> Fija el punto
+                            // Un toque rápido táctil fija el punto
                             const rect = canvas2D.getBoundingClientRect();
                             if (e.changedTouches.length > 0) {
                                 cursorX = e.changedTouches[0].clientX - rect.left;
@@ -964,7 +995,12 @@
             });
 
             const rangeS = globalMaxS - globalMinS || 1;
-            laserMesh.scale.setScalar(Math.max(rangeS * 0.005, 5));
+            
+            // Redimensionado dinámico del marcador de esfera según las proporciones del perfil
+            const sphereMarker = laserMesh.getObjectByName("sphere_marker");
+            if (sphereMarker) {
+                sphereMarker.scale.setScalar(Math.max(rangeS * 0.015, 12)); 
+            }
 
             minZ_grid = Math.floor(minZ / 50) * 50;
             const maxZ_grid = Math.ceil(maxZ / 50) * 50;
@@ -976,7 +1012,11 @@
             if (myRenderId === currentRenderId) {
                 titleEl.innerText = nombre.replace(".json", "");
                 titleEl.style.color = "var(--accent-color)";
-                document.getElementById('dpad-container').style.display = 'flex';
+                
+                // El D-Pad sólo se muestra de forma nativa si no estamos en móvil
+                if (window.innerWidth > 768) {
+                    document.getElementById('dpad-container').style.display = 'flex';
+                }
                 isProcessing2D = false;
             }
         }
@@ -1051,12 +1091,12 @@
             const logicalW = canvas2D.width / dpr;
             const logicalH = canvas2D.height / dpr;
             
-            // AJUSTE DINÁMICO DE MÁRGENES (MÁS ALTO EN MÓVILES PARA EVITAR OBSTRUIR CON DPAD)
+            // AJUSTE DINÁMICO DE MÁRGENES (MÁS ALTO EN MÓVILES PARA COMPENSAR ESPACIOS)
             const isMobile = window.innerWidth <= 768;
             const paddingLeft = 60;
             const paddingRight = 60;
             const paddingTop = 40;
-            const paddingBottom = isMobile ? 140 : 60; // Desplaza el gráfico hacia arriba en el celular
+            const paddingBottom = isMobile ? 120 : 60;
 
             const w_canvas = logicalW - (paddingLeft + paddingRight);
             const h_canvas = logicalH - (paddingTop + paddingBottom);
@@ -1145,6 +1185,28 @@
             const logicalW = canvas2D.width / dpr;
             const logicalH = canvas2D.height / dpr;
 
+            const isMobile = window.innerWidth <= 768;
+            
+            if (isMobile) {
+                // EN CELULARES NO DIBUJAMOS LA LUPA PARA NO TAPAR LA SELECCIÓN CON EL DEDO.
+                // Dibujamos líneas guías sutiles y mostramos el tooltip flotante alejado del dedo
+                ctx2D.save();
+                ctx2D.scale(dpr, dpr);
+
+                ctx2D.strokeStyle = "rgba(0, 188, 212, 0.4)"; ctx2D.lineWidth = 1; ctx2D.setLineDash([4, 4]); 
+                ctx2D.beginPath();
+                ctx2D.moveTo(0, cursorY); ctx2D.lineTo(logicalW, cursorY);
+                ctx2D.moveTo(cursorX, 0); ctx2D.lineTo(cursorX, logicalH); 
+                ctx2D.stroke(); ctx2D.restore();
+
+                tooltip2D.style.display = 'block';
+                tooltip2D.style.left = `${cursorX + canvas2D.getBoundingClientRect().left + 15}px`; 
+                tooltip2D.style.top = `${cursorY + canvas2D.getBoundingClientRect().top - 45}px`;
+                tooltip2D.innerHTML = `S: <span class="val">${cursorMundoS.toFixed(1)} m</span><br>Z: <span class="val">${cursorMundoZ.toFixed(1)} m</span>`;
+                return;
+            }
+
+            // MODO COMPUTADORA: DIBUJO TRADICIONAL DE LUPA CON ZOOM DE DETALLE
             ctx2D.save();
             ctx2D.scale(dpr, dpr);
 
@@ -1214,15 +1276,27 @@
                 if (intersects.length > 0) {
                     const diff = intersects[0].point.z - zScene;
                     profTerreno = diff >= 0 ? diff.toFixed(2) + " m" : "Por encima del terreno";
-                } else profTerreno = "Fuera de los límites del terreno";
+                } else profTerreno = "Fuera de los límites";
             } else profTerreno = "Terreno no cargado";
 
             const laserInfo = document.getElementById('laser-info');
             laserInfo.style.display = 'block';
-            laserInfo.innerHTML = `<div style="color:var(--danger-color); font-weight:bold; margin-bottom:8px; border-bottom:1px solid #444; padding-bottom:5px; font-size:11px;">📍 PUNTO SELECCIONADO</div>
-                Progresiva S: <span class="val">${cursorMundoS.toFixed(2)} m</span><br>
-                Elevación Z: <span class="val">${cursorMundoZ.toFixed(2)} m</span><br>
-                Prof. al Terreno: <span class="val">${profTerreno}</span>`;
+
+            const isMobile = window.innerWidth <= 768;
+
+            if (isMobile) {
+                // MAQUETADO DE INFORMACIÓN COMPACTO EXCLUSIVO PARA MÓVILES (PREFERENCIA A LA PROFUNDIDAD)
+                laserInfo.innerHTML = `
+                    <div style="color:var(--danger-color); font-weight:bold; font-size:10px; margin-bottom:2px; letter-spacing:0.5px;">📍 SELECCIÓN</div>
+                    <div style="font-size:12px; font-weight:bold; line-height:1.2;">Profundidad:<br><span style="color:#81c784; font-size:15px; font-weight:900;">${profTerreno}</span></div>
+                    <div style="font-size:9px; color:#aaa; margin-top:4px; border-top:1px solid #333; padding-top:4px;">S: ${cursorMundoS.toFixed(1)}m | Z: ${cursorMundoZ.toFixed(1)}m</div>
+                `;
+            } else {
+                laserInfo.innerHTML = `<div style="color:var(--danger-color); font-weight:bold; margin-bottom:8px; border-bottom:1px solid #444; padding-bottom:5px; font-size:11px;">📍 PUNTO SELECCIONADO</div>
+                    Progresiva S: <span class="val">${cursorMundoS.toFixed(2)} m</span><br>
+                    Elevación Z: <span class="val">${cursorMundoZ.toFixed(2)} m</span><br>
+                    Prof. al Terreno: <span class="val">${profTerreno}</span>`;
+            }
 
             updateCursor2D();
         }
