@@ -72,7 +72,22 @@
         #tooltip-2d { position: absolute; background: rgba(15, 15, 15, 0.95); border: 1px solid var(--border-color); padding: 10px; border-radius: 6px; pointer-events: none; font-size: 12px; font-family: monospace; display: none; z-index: 100; color: #ddd; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
         #tooltip-2d span.val { color: var(--accent-color); font-weight: bold; }
 
-        #laser-info { position: absolute; bottom: 25px; right: 25px; background: rgba(20, 20, 20, 0.95); border: 1px solid var(--danger-color); padding: 15px; border-radius: 8px; display: none; font-size: 13px; line-height: 1.6; z-index: 100; box-shadow: 0 4px 20px rgba(255, 82, 82, 0.15); pointer-events: none; }
+        #laser-info { 
+            position: absolute; 
+            bottom: 25px; 
+            right: 25px; 
+            background: rgba(20, 20, 20, 0.95); 
+            border: 1px solid var(--danger-color); 
+            padding: 12px 15px; 
+            border-radius: 8px; 
+            display: none; 
+            font-size: 13px; 
+            line-height: 1.4; 
+            z-index: 100; 
+            box-shadow: 0 4px 20px rgba(255, 82, 82, 0.15); 
+            pointer-events: none; 
+            max-width: 240px;
+        }
         #laser-info span.val { color: #81c784; font-weight: bold; }
 
         #dpad-container { position: absolute; bottom: 25px; left: 25px; display: none; flex-direction: column; align-items: center; gap: 4px; background: rgba(15, 15, 15, 0.85); padding: 12px; border-radius: 50px; border: 1px solid #444; z-index: 100; user-select: none; box-shadow: 0 4px 15px rgba(0,0,0,0.5); backdrop-filter: blur(5px); }
@@ -142,13 +157,13 @@
             /* Ocultamos por completo el D-Pad en el móvil */
             #dpad-container { display: none !important; }
             
-            /* Reubicación y optimización de la caja de información en celular */
+            /* Reubicación vertical para evitar que barra del navegador móvil corte el cartel */
             #laser-info { 
-                bottom: 25px; 
-                right: 20px; 
+                bottom: 85px; 
+                right: 15px; 
                 padding: 10px 12px; 
                 font-size: 11px; 
-                max-width: 170px;
+                max-width: 180px;
                 box-shadow: 0 4px 15px rgba(0,0,0,0.6);
                 border-radius: 6px;
             }
@@ -319,23 +334,10 @@
             gridHelper.rotation.x = Math.PI / 2;
             scene.add(gridHelper);
 
-            // Marcador láser 3D de alta visibilidad compuesto por esfera y pilar vertical
-            laserMesh = new THREE.Group();
-
+            // Marcador láser 3D clásico (Únicamente la esfera roja brillante)
             const sg = new THREE.SphereGeometry(1, 16, 16);
             const sm = new THREE.MeshBasicMaterial({color: 0xff1744, depthTest: false});
-            const sphere = new THREE.Mesh(sg, sm);
-            sphere.name = "sphere_marker";
-            laserMesh.add(sphere);
-
-            const lineGeom = new THREE.BufferGeometry().setFromPoints([
-                new THREE.Vector3(0, 0, -3000),
-                new THREE.Vector3(0, 0, 3000)
-            ]);
-            const lineMat = new THREE.LineBasicMaterial({color: 0xff1744, depthTest: false, linewidth: 2});
-            const pillar = new THREE.Line(lineGeom, lineMat);
-            laserMesh.add(pillar);
-
+            laserMesh = new THREE.Mesh(sg, sm);
             laserMesh.renderOrder = 999;
             laserMesh.visible = false;
             scene.add(laserMesh);
@@ -391,6 +393,32 @@
         function toggle2DPanel() {
             document.getElementById('main-wrapper').classList.toggle('is-2d-collapsed');
             setTimeout(onWindowResize, 310);
+        }
+
+        function destacarPerfilEn3D(nombreActivo) {
+            // Recorremos los perfiles cargados y atenuamos los que no corresponden al perfil activo
+            Object.keys(perfilesCargados).forEach(key => {
+                const meshes = perfilesCargados[key];
+                const esActivo = (key === nombreActivo);
+                meshes.forEach(mesh => {
+                    if (mesh.material) {
+                        mesh.material.transparent = true;
+                        mesh.material.opacity = esActivo ? 1.0 : 0.15;
+                    }
+                });
+            });
+        }
+
+        function restaurarPerfiles3D() {
+            Object.keys(perfilesCargados).forEach(key => {
+                const meshes = perfilesCargados[key];
+                meshes.forEach(mesh => {
+                    if (mesh.material) {
+                        mesh.material.transparent = false;
+                        mesh.material.opacity = 1.0;
+                    }
+                });
+            });
         }
 
         function vincularEventosUI() {
@@ -470,9 +498,9 @@
 
             window.addEventListener('resize', onWindowResize);
             
-            // Ajustes finos de velocidad de zoom para botones flotantes en móviles
+            // Sensibilidad calibrada para zoom táctil y botoneras flotantes
             const isMobile = window.innerWidth <= 768;
-            const factorBoton = isMobile ? 1.15 : 1.3;
+            const factorBoton = isMobile ? 1.2 : 1.3;
 
             bindEvent('btn-zoom-in', 'click', () => {
                 zoom2D = Math.min(30, zoom2D * factorBoton);
@@ -537,7 +565,7 @@
                             reconstruirCacheScreen();
                         }
                     } else {
-                        // Cursor flotante (Desktop)
+                        // Cursor flotante en Desktop
                         cursorX = curX;
                         cursorY = curY;
                         isCursorActive = true;
@@ -549,7 +577,7 @@
                     if (isDragging2D) {
                         isDragging2D = false;
                         if (!dragMoved) {
-                            triggerCursorClick(); // Clic rápido -> Fija punto
+                            triggerCursorClick(); // Clic estático rápido fija punto
                         }
                     }
                 });
@@ -561,7 +589,7 @@
                     dibu2D(); 
                 });
 
-                // Soporte táctil móvil amortiguado (Pinch-to-zoom mucho más suave)
+                // Zoom multitáctil balanceado (No lento, fluido y natural)
                 canvas2D.addEventListener('touchstart', (e) => {
                     if (!dataProyeccion2D) return;
                     const rect = canvas2D.getBoundingClientRect();
@@ -593,8 +621,8 @@
                         const currentDist = Math.hypot(dx, dy);
                         if (touchStartDist > 0) {
                             const factor = currentDist / touchStartDist;
-                            // COEFICIENTE DE AMORTIGUACIÓN PARA EL ZOOM TÁCTIL (HACE EL ZOOM MUCHO MÁS LENTO Y CONTROLABLE)
-                            const dampFactor = 1 + (factor - 1) * 0.15; 
+                            // COEFICIENTE DE AMORTIGUACIÓN OPTIMIZADO PARA PRECISIÓN NATURAL (0.65)
+                            const dampFactor = 1 + (factor - 1) * 0.65; 
                             zoom2D = Math.max(0.5, Math.min(30, zoom2D * dampFactor));
                             touchStartDist = currentDist;
                             reconstruirCacheScreen();
@@ -619,7 +647,7 @@
                     if (isDragging2D) {
                         isDragging2D = false;
                         if (!dragMoved && !isPinchZooming) {
-                            // Un toque rápido táctil fija el punto
+                            // Toque táctil rápido fija punto
                             const rect = canvas2D.getBoundingClientRect();
                             if (e.changedTouches.length > 0) {
                                 cursorX = e.changedTouches[0].clientX - rect.left;
@@ -944,6 +972,9 @@
             document.getElementById('dpad-container').style.display = 'none';
             isCursorActive = false;
 
+            // Iluminamos el perfil actual en el espacio tridimensional y atenuamos el resto
+            destacarPerfilEn3D(nombre);
+
             await new Promise(r => setTimeout(r, 10));
 
             let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity, minZ = Infinity, maxZ = -Infinity;
@@ -996,11 +1027,8 @@
 
             const rangeS = globalMaxS - globalMinS || 1;
             
-            // Redimensionado dinámico del marcador de esfera según las proporciones del perfil
-            const sphereMarker = laserMesh.getObjectByName("sphere_marker");
-            if (sphereMarker) {
-                sphereMarker.scale.setScalar(Math.max(rangeS * 0.015, 12)); 
-            }
+            // Redimensionado nativo del marcador esférico para conservar la proporción
+            laserMesh.scale.setScalar(Math.max(rangeS * 0.015, 14)); 
 
             minZ_grid = Math.floor(minZ / 50) * 50;
             const maxZ_grid = Math.ceil(maxZ / 50) * 50;
@@ -1013,7 +1041,6 @@
                 titleEl.innerText = nombre.replace(".json", "");
                 titleEl.style.color = "var(--accent-color)";
                 
-                // El D-Pad sólo se muestra de forma nativa si no estamos en móvil
                 if (window.innerWidth > 768) {
                     document.getElementById('dpad-container').style.display = 'flex';
                 }
@@ -1091,7 +1118,7 @@
             const logicalW = canvas2D.width / dpr;
             const logicalH = canvas2D.height / dpr;
             
-            // AJUSTE DINÁMICO DE MÁRGENES (MÁS ALTO EN MÓVILES PARA COMPENSAR ESPACIOS)
+            // MARGEN DE AJUSTE ADAPTATIVO EN CELULARES PARA PREVENIR TAPAR CON EL DEDO
             const isMobile = window.innerWidth <= 768;
             const paddingLeft = 60;
             const paddingRight = 60;
@@ -1188,8 +1215,8 @@
             const isMobile = window.innerWidth <= 768;
             
             if (isMobile) {
-                // EN CELULARES NO DIBUJAMOS LA LUPA PARA NO TAPAR LA SELECCIÓN CON EL DEDO.
-                // Dibujamos líneas guías sutiles y mostramos el tooltip flotante alejado del dedo
+                // EN CELULARES NO SE DIBUJA LUPA PARA PREVENIR OBSTRUIR LA SELECCIÓN
+                // Marcador simple con guías para lectura cómoda
                 ctx2D.save();
                 ctx2D.scale(dpr, dpr);
 
@@ -1206,7 +1233,7 @@
                 return;
             }
 
-            // MODO COMPUTADORA: DIBUJO TRADICIONAL DE LUPA CON ZOOM DE DETALLE
+            // MODO COMPUTADORA: DIBUJO TRADICIONAL DE LUPA CON DETALLE AMPLIADO
             ctx2D.save();
             ctx2D.scale(dpr, dpr);
 
@@ -1285,17 +1312,17 @@
             const isMobile = window.innerWidth <= 768;
 
             if (isMobile) {
-                // MAQUETADO DE INFORMACIÓN COMPACTO EXCLUSIVO PARA MÓVILES (PREFERENCIA A LA PROFUNDIDAD)
+                // FORMATO COMPACTO ORIENTADO EXCLUSIVAMENTE A LA PROFUNDIDAD DESDE EL TERRENO AL PUNTO
                 laserInfo.innerHTML = `
-                    <div style="color:var(--danger-color); font-weight:bold; font-size:10px; margin-bottom:2px; letter-spacing:0.5px;">📍 SELECCIÓN</div>
-                    <div style="font-size:12px; font-weight:bold; line-height:1.2;">Profundidad:<br><span style="color:#81c784; font-size:15px; font-weight:900;">${profTerreno}</span></div>
-                    <div style="font-size:9px; color:#aaa; margin-top:4px; border-top:1px solid #333; padding-top:4px;">S: ${cursorMundoS.toFixed(1)}m | Z: ${cursorMundoZ.toFixed(1)}m</div>
+                    <div style="color:var(--danger-color); font-weight:bold; font-size:10px; margin-bottom:2px; letter-spacing:0.5px;">📍 PUNTO SELECCIONADO</div>
+                    <div style="font-size:12px; font-weight:bold; line-height:1.2;">Profundidad al Terreno:<br><span style="color:#81c784; font-size:15px; font-weight:900;">${profTerreno}</span></div>
+                    <div style="font-size:9px; color:#aaa; margin-top:4px; border-top:1px solid #333; padding-top:4px;">Progresiva S: ${cursorMundoS.toFixed(1)} m</div>
                 `;
             } else {
                 laserInfo.innerHTML = `<div style="color:var(--danger-color); font-weight:bold; margin-bottom:8px; border-bottom:1px solid #444; padding-bottom:5px; font-size:11px;">📍 PUNTO SELECCIONADO</div>
+                    Prof. al Terreno: <span class="val" style="font-size:14px; color:#81c784;">${profTerreno}</span><br>
                     Progresiva S: <span class="val">${cursorMundoS.toFixed(2)} m</span><br>
-                    Elevación Z: <span class="val">${cursorMundoZ.toFixed(2)} m</span><br>
-                    Prof. al Terreno: <span class="val">${profTerreno}</span>`;
+                    Elevación Z: <span class="val">${cursorMundoZ.toFixed(2)} m</span>`;
             }
 
             updateCursor2D();
@@ -1338,6 +1365,7 @@
                         document.getElementById('active-profile-title').innerText = "[Ninguno seleccionado]";
                         ctx2D.fillStyle = '#0a0a0a'; ctx2D.fillRect(0, 0, canvas2D.width, canvas2D.height);
                     }
+                    restaurarPerfiles3D();
                 }
                 div.remove();
                 if (container.children.length === 0) container.innerHTML = `<div id="empty-list-msg" style="font-size: 12px; color: #555; text-align: center; padding: 15px; border: 1px dashed #333; border-radius: 6px;">Ningún archivo cargado</div>`;
