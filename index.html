@@ -31,10 +31,11 @@
         .viewport { position: relative; flex: 1; height: 100%; box-sizing: border-box; min-height: 0; min-width: 0; }
         
         #view-3d { border-right: 2px solid var(--border-color); }
-        #view-2d { background-color: #0b0b0b; display: flex; flex-direction: column; transition: flex 0.3s ease, width 0.3s ease, height 0.3s ease, opacity 0.3s ease; }
+        #view-2d { background-color: #0b0b0b; display: flex; flex-direction: column; transition: flex 0.3s ease, width 0.3s ease, height 0.3s ease, opacity 0.3s ease; position: relative; }
         
         #canvas-3d { width: 100%; height: 100%; }
-        #canvas-2d { flex-grow: 1; width: 100%; height: 100%; display: block; background-color: #0a0a0a; cursor: none; outline: none; }
+        #canvas-2d { flex-grow: 1; width: 100%; height: 100%; display: block; background-color: #0a0a0a; cursor: grab; outline: none; }
+        #canvas-2d:active { cursor: grabbing; }
         
         h1 { font-size: 16px; margin: 0 0 20px 0; text-transform: uppercase; letter-spacing: 1px; color: var(--accent-color); border-bottom: 2px solid var(--border-color); padding-bottom: 10px; }
         h2 { font-size: 11px; margin: 15px 0 8px 0; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px; }
@@ -82,6 +83,39 @@
         #btn-center { font-size: 16px; background: #1a1a1a; color: var(--danger-color); }
         #btn-center:hover { background: var(--danger-color); color: white; border-color: var(--danger-color); }
         
+        /* Controles de zoom 2D flotantes */
+        #zoom-controls-2d {
+            position: absolute;
+            top: 60px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 101;
+        }
+        .zoom-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 6px;
+            background: rgba(20, 20, 20, 0.85);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s, color 0.2s;
+            backdrop-filter: blur(4px);
+            user-select: none;
+        }
+        .zoom-btn:hover {
+            background: var(--accent-color);
+            color: #000;
+            border-color: var(--accent-color);
+        }
+
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
@@ -96,8 +130,9 @@
         @media (max-width: 768px) {
             #views-container { flex-direction: column; }
             #view-3d { border-right: none; border-bottom: 2px solid var(--border-color); }
-            #sidebar { position: absolute; height: 100vh; left: 0; top: 0; max-width: 85vw; z-index: 1000; box-shadow: 2px 0 15px rgba(0,0,0,0.5); }
+            #sidebar { position: absolute; height: 100vh; height: 100dvh; left: 0; top: 0; max-width: 85vw; z-index: 1000; box-shadow: 2px 0 15px rgba(0,0,0,0.5); }
             #sidebar.collapsed { width: 0; border-right: none; box-shadow: none; }
+            #sidebar-content { padding-bottom: 120px !important; } /* Margen extra para ver Perfil 3 y 4 sin problemas */
             #btn-toggle-2d { transform: rotate(0deg); }
             #main-wrapper.is-2d-collapsed #view-2d { flex: 0 0 44px !important; height: 44px !important; overflow: hidden; }
             #main-wrapper.is-2d-collapsed #btn-toggle-2d { transform: rotate(180deg); }
@@ -176,6 +211,14 @@
                     </div>
                     <span id="active-profile-title" style="color: var(--accent-color); font-size:12px;">[Ninguno seleccionado]</span>
                 </div>
+                
+                <!-- Botones flotantes de zoom para 2D -->
+                <div id="zoom-controls-2d">
+                    <button class="zoom-btn" id="btn-zoom-in" title="Acercar">+</button>
+                    <button class="zoom-btn" id="btn-zoom-out" title="Alejar">-</button>
+                    <button class="zoom-btn" id="btn-zoom-reset" title="Restaurar escala">R</button>
+                </div>
+
                 <canvas id="canvas-2d" tabindex="0"></canvas>
                 <div id="tooltip-2d"></div>
                 <div id="laser-info"></div>
@@ -215,6 +258,11 @@
         let cursorX = -1000, cursorY = -1000;
         let cursorMundoS = 0, cursorMundoZ = 0;
         let isCursorActive = false;
+
+        // Variables de navegación y zoom para el lienzo 2D
+        let zoom2D = 1.0;
+        let panX = 0;
+        let panY = 0;
 
         const rawMeshCanvas = document.createElement('canvas');
         const ctxRaw = rawMeshCanvas.getContext('2d', { alpha: true });
@@ -276,7 +324,6 @@
 
         // FUNCIÓN DE AUTOCARGA DINÁMICA CONFIGURADA PARA TUS 5 ARCHIVOS
         async function cargarDatosPreestablecidos() {
-            // 1. Intentar cargar tu terreno específico
             try {
                 const resTerreno = await fetch('terreno_web.json');
                 if (resTerreno.ok) {
@@ -284,14 +331,11 @@
                     terrenoCrudoData = dataTerreno;
                     nombreArchivoTerreno = "terreno_web.json";
                     construirTerreno(dataTerreno, "terreno_web.json");
-                } else {
-                    console.log("No se encontró terreno_web.json en la misma carpeta.");
                 }
             } catch (e) {
                 console.warn("Autocarga de terreno omitida:", e);
             }
 
-            // 2. Cargar tus 4 perfiles geofísicos secuencialmente
             const nombresPerfiles = ['Perfil1.json', 'Perfil2.json', 'Perfil3.json', 'Perfil4.json'];
             let primerPerfilCargado = null;
             let nombrePrimerPerfil = "";
@@ -303,20 +347,16 @@
                         const dataPerfil = await resPerfil.json();
                         construirPerfil(dataPerfil, nombre);
                         
-                        // Guardamos el primer perfil que cargue bien para proyectar su sección 2D
                         if (!primerPerfilCargado) {
                             primerPerfilCargado = dataPerfil;
                             nombrePrimerPerfil = nombre;
                         }
-                    } else {
-                        console.log(`No se encontró el archivo: ${nombre}`);
                     }
                 } catch (e) {
                     console.warn(`Error al cargar ${nombre}:`, e);
                 }
             }
 
-            // 3. Activar el Perfil1 en el lienzo 2D al iniciar
             if (primerPerfilCargado) {
                 activarPerfil2D(nombrePrimerPerfil, primerPerfilCargado);
             }
@@ -404,33 +444,162 @@
 
             window.addEventListener('resize', onWindowResize);
             
+            // Eventos de control de Zoom flotantes
+            bindEvent('btn-zoom-in', 'click', () => {
+                zoom2D = Math.min(20, zoom2D * 1.3);
+                reconstruirCacheScreen();
+                if (isCursorActive) updateCursor2D();
+            });
+            bindEvent('btn-zoom-out', 'click', () => {
+                zoom2D = Math.max(0.5, zoom2D / 1.3);
+                reconstruirCacheScreen();
+                if (isCursorActive) updateCursor2D();
+            });
+            bindEvent('btn-zoom-reset', 'click', () => {
+                zoom2D = 1.0;
+                panX = 0;
+                panY = 0;
+                reconstruirCacheScreen();
+                if (isCursorActive) updateCursor2D();
+            });
+            
             if (canvas2D) {
-                const actualizarDesdeEvento = (clientX, clientY) => {
-                    const rect = canvas2D.getBoundingClientRect();
-                    cursorX = clientX - rect.left;
-                    cursorY = clientY - rect.top;
-                    isCursorActive = true;
-                    updateCursor2D();
-                };
+                let isDragging2D = false;
+                let startDragX = 0, startDragY = 0;
+                let originalPanX = 0, originalPanY = 0;
+                let dragMoved = false;
+                let touchStartDist = 0;
+                let isPinchZooming = false;
 
-                canvas2D.addEventListener('mousemove', (e) => actualizarDesdeEvento(e.clientX, e.clientY));
+                // Zoom por rueda de ratón en escritorio
+                canvas2D.addEventListener('wheel', (e) => {
+                    if (!dataProyeccion2D) return;
+                    e.preventDefault();
+                    const zoomFactor = e.deltaY < 0 ? 1.15 : 0.85;
+                    zoom2D = Math.max(0.5, Math.min(20, zoom2D * zoomFactor));
+                    reconstruirCacheScreen();
+                    if (isCursorActive) updateCursor2D();
+                }, { passive: false });
+
+                canvas2D.addEventListener('mousedown', (e) => {
+                    if (!dataProyeccion2D) return;
+                    isDragging2D = true;
+                    const rect = canvas2D.getBoundingClientRect();
+                    startDragX = e.clientX - rect.left;
+                    startDragY = e.clientY - rect.top;
+                    originalPanX = panX;
+                    originalPanY = panY;
+                    dragMoved = false;
+                });
+
+                canvas2D.addEventListener('mousemove', (e) => {
+                    if (!dataProyeccion2D) return;
+                    const rect = canvas2D.getBoundingClientRect();
+                    const curX = e.clientX - rect.left;
+                    const curY = e.clientY - rect.top;
+
+                    if (isDragging2D) {
+                        const dx = curX - startDragX;
+                        const dy = curY - startDragY;
+                        if (Math.hypot(dx, dy) > 4) {
+                            dragMoved = true;
+                            panX = originalPanX + dx;
+                            panY = originalPanY + dy;
+                            reconstruirCacheScreen();
+                        }
+                    } else {
+                        // Movimiento del cursor flotante (Desktop)
+                        cursorX = curX;
+                        cursorY = curY;
+                        isCursorActive = true;
+                        updateCursor2D();
+                    }
+                });
+
+                canvas2D.addEventListener('mouseup', (e) => {
+                    if (isDragging2D) {
+                        isDragging2D = false;
+                        if (!dragMoved) {
+                            triggerCursorClick(); // Clic estático -> Fija punto
+                        }
+                    }
+                });
+
                 canvas2D.addEventListener('mouseleave', () => { 
+                    isDragging2D = false;
                     isCursorActive = false;
-                    if(tooltip2D) tooltip2D.style.display = 'none'; 
+                    if (tooltip2D) tooltip2D.style.display = 'none'; 
                     dibu2D(); 
                 });
-                canvas2D.addEventListener('click', triggerCursorClick);
 
-                const handleTouch = (e) => {
-                    if (e.touches.length > 0) {
-                        actualizarDesdeEvento(e.touches[0].clientX, e.touches[0].clientY);
+                // Soporte táctil móvil avanzado (Pinch-to-zoom y Arrastre de mapa)
+                canvas2D.addEventListener('touchstart', (e) => {
+                    if (!dataProyeccion2D) return;
+                    const rect = canvas2D.getBoundingClientRect();
+                    isDragging2D = true;
+                    dragMoved = false;
+
+                    if (e.touches.length === 1) {
+                        isPinchZooming = false;
+                        startDragX = e.touches[0].clientX - rect.left;
+                        startDragY = e.touches[0].clientY - rect.top;
+                        originalPanX = panX;
+                        originalPanY = panY;
+                    } else if (e.touches.length === 2) {
+                        isPinchZooming = true;
+                        const dx = e.touches[0].clientX - e.touches[1].clientX;
+                        const dy = e.touches[0].clientY - e.touches[1].clientY;
+                        touchStartDist = Math.hypot(dx, dy);
                     }
-                };
-                canvas2D.addEventListener('touchstart', handleTouch, {passive: true});
-                canvas2D.addEventListener('touchmove', (e) => { 
-                    if(isCursorActive) e.preventDefault(); 
-                    handleTouch(e); 
-                }, {passive: false});
+                }, { passive: true });
+
+                canvas2D.addEventListener('touchmove', (e) => {
+                    if (!dataProyeccion2D) return;
+                    const rect = canvas2D.getBoundingClientRect();
+
+                    if (isPinchZooming && e.touches.length === 2) {
+                        e.preventDefault();
+                        const dx = e.touches[0].clientX - e.touches[1].clientX;
+                        const dy = e.touches[0].clientY - e.touches[1].clientY;
+                        const currentDist = Math.hypot(dx, dy);
+                        if (touchStartDist > 0) {
+                            const factor = currentDist / touchStartDist;
+                            zoom2D = Math.max(0.5, Math.min(20, zoom2D * (factor > 1 ? 1.04 : 0.96)));
+                            touchStartDist = currentDist;
+                            reconstruirCacheScreen();
+                        }
+                    } else if (isDragging2D && e.touches.length === 1) {
+                        e.preventDefault();
+                        const curX = e.touches[0].clientX - rect.left;
+                        const curY = e.touches[0].clientY - rect.top;
+                        const dx = curX - startDragX;
+                        const dy = curY - startDragY;
+
+                        if (Math.hypot(dx, dy) > 5) {
+                            dragMoved = true;
+                            panX = originalPanX + dx;
+                            panY = originalPanY + dy;
+                            reconstruirCacheScreen();
+                        }
+                    }
+                }, { passive: false });
+
+                canvas2D.addEventListener('touchend', (e) => {
+                    if (isDragging2D) {
+                        isDragging2D = false;
+                        if (!dragMoved && !isPinchZooming) {
+                            // Un toque estático rápido -> Fija el punto
+                            const rect = canvas2D.getBoundingClientRect();
+                            if (e.changedTouches.length > 0) {
+                                cursorX = e.changedTouches[0].clientX - rect.left;
+                                cursorY = e.changedTouches[0].clientY - rect.top;
+                                isCursorActive = true;
+                                triggerCursorClick();
+                            }
+                        }
+                        isPinchZooming = false;
+                    }
+                });
 
                 window.addEventListener('keydown', (e) => {
                     if (!dataProyeccion2D || isProcessing2D || !isCursorActive) return;
@@ -723,8 +892,14 @@
             const myRenderId = currentRenderId;
 
             activeProfileName = nombre;
+            
+            // Reiniciamos navegación de zoom y pan al activar nuevo perfil
+            zoom2D = 1.0;
+            panX = 0;
+            panY = 0;
+
             const titleEl = document.getElementById('active-profile-title');
-            titleEl.innerText = `[ Calculando proyección... ]`;
+            titleEl.innerText = `[ Calculando... ]`;
             titleEl.style.color = "#ffb74d"; 
 
             const safeId = nombre.replace(/[^a-zA-Z0-9]/g, '_');
@@ -875,18 +1050,29 @@
 
             const logicalW = canvas2D.width / dpr;
             const logicalH = canvas2D.height / dpr;
-            const padding = 60;
-            const w_canvas = logicalW - padding * 2;
-            const h_canvas = logicalH - padding * 2;
+            
+            // AJUSTE DINÁMICO DE MÁRGENES (MÁS ALTO EN MÓVILES PARA EVITAR OBSTRUIR CON DPAD)
+            const isMobile = window.innerWidth <= 768;
+            const paddingLeft = 60;
+            const paddingRight = 60;
+            const paddingTop = 40;
+            const paddingBottom = isMobile ? 140 : 60; // Desplaza el gráfico hacia arriba en el celular
+
+            const w_canvas = logicalW - (paddingLeft + paddingRight);
+            const h_canvas = logicalH - (paddingTop + paddingBottom);
 
             if (w_canvas <= 0 || h_canvas <= 0) { ctxCache.restore(); return; }
 
             const rngS = Math.max(dataProyeccion2D.maxS - dataProyeccion2D.minS, 1);
             const rngZ = Math.max(dataProyeccion2D.maxZ_grid - dataProyeccion2D.minZ_grid, 1);
 
-            escalaGlobal = Math.min(w_canvas / rngS, h_canvas / rngZ);
-            transX = padding + (w_canvas - rngS * escalaGlobal) / 2;
-            transY = padding + (h_canvas + rngZ * escalaGlobal) / 2; 
+            // APLICAMOS EL VALOR DEL ZOOM DE LA VISTA 2D
+            const baseEscala = Math.min(w_canvas / rngS, h_canvas / rngZ);
+            escalaGlobal = baseEscala * zoom2D;
+            
+            // APLICAMOS LA TRASLACIÓN CON LOS DESPLAZAMIENTOS (PAN)
+            transX = paddingLeft + (w_canvas - rngS * escalaGlobal) / 2 + panX;
+            transY = paddingTop + (h_canvas + rngZ * escalaGlobal) / 2 + panY; 
 
             ctxCache.strokeStyle = "rgba(255, 255, 255, 0.1)";
             ctxCache.fillStyle = "#888888"; 
