@@ -413,6 +413,9 @@
                             const txtData = await resTXT.text();
                             procesarProgresivasTXT(txtData, nombreTXT);
                         }
+                        
+                        // Permite que la UI respire (y dibuje el 3D) mientras carga los demás
+                        await new Promise(r => setTimeout(r, 10));
                     }
                 } catch (e) {
                     console.warn(`Error al cargar ${nombre}:`, e);
@@ -479,45 +482,38 @@
         // FASE 1 - CORE: DESENROLLADO CURVILÍNEO (TRUE PROGRESSIVE MAPPING)
         // --------------------------------------------------------------------------
 
-        // 1. Proyectar un Vértice 3D (X, Y) a la Poli-línea Curva (Devuelve "S")
-        function proyectarXYEnPoliLinea(x, y, poliLinea) {
-            if (!poliLinea || poliLinea.length === 0) return 0;
-            if (poliLinea.length === 1) return poliLinea[0].s;
-
+        // Optimización matemática masiva: Calcula un Vértice usando Tramos Pre-calculados
+        function proyectarXYEnSegmentosPrecalculados(x, y, segmentos) {
+            if (!segmentos || segmentos.length === 0) return 0;
             let minDistSq = Infinity;
             let bestS = 0;
 
-            for (let i = 0; i < poliLinea.length - 1; i++) {
-                let p1 = poliLinea[i];
-                let p2 = poliLinea[i+1];
-                
-                let dx = p2.x - p1.x;
-                let dy = p2.y - p1.y;
-                let l2 = dx*dx + dy*dy;
-                
+            for (let i = 0; i < segmentos.length; i++) {
+                let seg = segmentos[i];
                 let t = 0;
-                if (l2 > 0) t = ((x - p1.x) * dx + (y - p1.y) * dy) / l2;
+                // Proyección Ortogonal al Vector
+                if (seg.l2 > 0) t = ((x - seg.p1.x) * seg.dx + (y - seg.p1.y) * seg.dy) / seg.l2;
                 
-                let tc = Math.max(0, Math.min(1, t)); // Clamped para chequear distancia ortogonal
+                // Clamping rápido (0 a 1) para ubicar el punto más cercano dentro del segmento
+                let tc = t < 0 ? 0 : (t > 1 ? 1 : t);
                 
-                let px = p1.x + tc * dx;
-                let py = p1.y + tc * dy;
+                let px = seg.p1.x + tc * seg.dx;
+                let py = seg.p1.y + tc * seg.dy;
                 let distSq = (x - px)*(x - px) + (y - py)*(y - py);
                 
                 if (distSq < minDistSq) {
                     minDistSq = distSq;
                     let trueT = tc;
-                    // Permitir extrapolación en los extremos si el punto se pasa de la línea
+                    // Permitir extrapolación muy fina si el punto queda antes del inicio o después del final del TXT completo
                     if (i === 0 && t < 0) trueT = t;
-                    if (i === poliLinea.length - 2 && t > 1) trueT = t;
-                    
-                    bestS = p1.s + trueT * (p2.s - p1.s);
+                    if (i === segmentos.length - 1 && t > 1) trueT = t;
+                    bestS = seg.p1.s + trueT * (seg.p2.s - seg.p1.s);
                 }
             }
             return bestS;
         }
 
-        // 2. Proceso Inverso: Transformar un "S" del 2D a un (X, Y, Z) en el espacio 3D
+        // Proceso Inverso: Transformar un "S" interactuado en 2D a un (X, Y, Z) en el espacio 3D real
         function obtenerCoordenadasDesdeS(S, poliLinea) {
             if (!poliLinea || poliLinea.length === 0) return null;
             if (poliLinea.length === 1) return { x: poliLinea[0].x, y: poliLinea[0].y, z: poliLinea[0].z, s: S };
@@ -550,7 +546,7 @@
             };
         }
 
-        // 3. Función Principal Integradora para el Láser/Sonda
+        // Función Principal Integradora para el Láser/Sonda
         function obtenerCoordenadasReales(S) {
             if (!activeProfileName) return null;
             let txtName = activeProfileName.replace('Perfil', 'PL').replace('.json', '.txt');
@@ -560,13 +556,12 @@
             if (txtData) {
                 return obtenerCoordenadasDesdeS(S, txtData); 
             } else if (dataProyeccion2D && dataProyeccion2D.spineFallback) {
-                // Si no hay TXT usamos el respaldo esquelético curvado
                 return obtenerCoordenadasDesdeS(S, dataProyeccion2D.spineFallback);
             }
             return null;
         }
 
-        // 4. PLAN DE RESPALDO (Spine Fallback): Si no hay TXT, creamos un esqueleto curvo promediando el modelo 3D
+        // PLAN DE RESPALDO (Spine Fallback): Si no hay TXT, creamos un esqueleto curvo automático
         function crearSpineFallback(data) {
             let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
             let pMinX = null, pMaxX = null, pMinY = null, pMaxY = null;
@@ -1224,7 +1219,8 @@
             document.getElementById('dpad-container').style.display = 'none';
             isCursorActive = false;
 
-            await new Promise(r => setTimeout(r, 10));
+            // FASE 1: Permitimos que el DOM dibuje el cambio de estado (Loading) antes del proceso pesado
+            await new Promise(r => setTimeout(r, 20));
 
             let minZ = Infinity, maxZ = -Infinity;
             let countVertices = 0;
@@ -1242,24 +1238,46 @@
 
             if (countVertices === 0) { isProcessing2D = false; return; }
 
-            // FASE 1: DESENROLLADO CURVILÍNEO (Reemplaza la cuerda geométrica recta)
+            // FASE 1: DESENROLLADO CURVILÍNEO (True Progressive Mapping)
             let txtName = nombre.replace('Perfil', 'PL').replace('.json', '.txt');
             let altName = nombre.replace('.json', '.txt');
             let txtData = progresivasCargadas[txtName] || progresivasCargadas[altName];
             
-            // Asignar el PoliLínea (Datos TXT Reales o un Fallback Curvado)
             let poliLineaActiva = txtData || crearSpineFallback(data);
             
+            // OPTIMIZACIÓN MATEMÁTICA: Pre-calcular geometría de segmentos para evitar re-cálculos masivos
+            const optSegments = [];
+            if (poliLineaActiva && poliLineaActiva.length > 1) {
+                for (let i = 0; i < poliLineaActiva.length - 1; i++) {
+                    let p1 = poliLineaActiva[i];
+                    let p2 = poliLineaActiva[i+1];
+                    let dx = p2.x - p1.x;
+                    let dy = p2.y - p1.y;
+                    let l2 = dx*dx + dy*dy;
+                    optSegments.push({ p1, p2, dx, dy, l2 });
+                }
+            }
+
             let globalMinS = Infinity, globalMaxS = -Infinity;
             const estratosProyectados = [];
+            
+            let verticesProcesados = 0;
 
-            data.forEach(capa => {
+            for (let c = 0; c < data.length; c++) {
+                let capa = data[c];
                 const vertices2D = [];
+                
                 for (let i = 0; i < capa.vertices.length; i += 3) {
+                    // ANTI-FREEZE: Liberamos el hilo principal cada 15,000 vértices para evitar que el navegador se trabe
+                    if (verticesProcesados > 0 && verticesProcesados % 15000 === 0) {
+                        await new Promise(r => setTimeout(r, 0));
+                        if (myRenderId !== currentRenderId) return; // Si el usuario cambió de perfil, abortamos cálculo
+                    }
+                    verticesProcesados++;
+
                     let vx = capa.vertices[i], vy = capa.vertices[i+1], vz = capa.vertices[i+2];
                     if (Number.isFinite(vx)) {
-                        // Proyección matemática ortogonal curva (Elimina acortamientos)
-                        let s = proyectarXYEnPoliLinea(vx, vy, poliLineaActiva);
+                        let s = proyectarXYEnSegmentosPrecalculados(vx, vy, optSegments);
                         
                         if (s < globalMinS) globalMinS = s;
                         if (s > globalMaxS) globalMaxS = s;
@@ -1269,7 +1287,14 @@
                     }
                 }
                 estratosProyectados.push({ color: capa.color, caras: capa.caras, vertices: vertices2D });
-            });
+            }
+
+            // FASE 1 - EXTENSIÓN FORZADA DE LA GRILLA:
+            // Sobreescribimos los límites matemáticos del 3D con los reales del archivo TXT
+            if (txtData && txtData.length > 0) {
+                globalMinS = txtData[0].s;
+                globalMaxS = txtData[txtData.length - 1].s;
+            }
 
             const rangeS = globalMaxS - globalMinS || 1;
             laserMesh.scale.setScalar(Math.max(rangeS * 0.015, 14)); 
@@ -1537,7 +1562,6 @@
 
             clickedPoint2D = { s: cursorMundoS, z: cursorMundoZ };
 
-            // Usamos la nueva lógica integradora para ubicar el Láser 3D en base al S curvo
             let coordsReales = obtenerCoordenadasReales(cursorMundoS);
             let xScene = 0, yScene = 0, zScene = 0;
 
