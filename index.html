@@ -436,7 +436,7 @@
 
             const nombresPerfiles = ['Perfil1.json', 'Perfil2.json', 'Perfil3.json', 'Perfil4.json'];
             let primerPerfilCargado = null;
-            let nombrePrimerPerfil = "";
+            let textPrimerPerfil = "";
 
             for (const nombre of nombresPerfiles) {
                 try {
@@ -447,7 +447,7 @@
                         
                         if (!primerPerfilCargado) {
                             primerPerfilCargado = dataPerfil;
-                            nombrePrimerPerfil = nombre;
+                            textPrimerPerfil = nombre;
                         }
                     }
                 } catch (e) {
@@ -456,7 +456,7 @@
             }
 
             if (primerPerfilCargado) {
-                activarPerfil2D(nombrePrimerPerfil, primerPerfilCargado);
+                activarPerfil2D(textPrimerPerfil, primerPerfilCargado);
             }
         }
 
@@ -1106,7 +1106,8 @@
             const rngS = Math.max(dataProyeccion2D.maxS - dataProyeccion2D.minS, 1);
             const rngZ = Math.max(dataProyeccion2D.maxZ_grid - dataProyeccion2D.minZ_grid, 1);
 
-            rawMeshCanvas.width = 8192; 
+            // Optimización de resolución interna: 4096px es el dulce punto para nitidez Retina/4K sin generar efecto Moiré (rayas) ni lentitud.
+            rawMeshCanvas.width = 4096; 
             escalaRaw = rawMeshCanvas.width / rngS;
             rawMeshCanvas.height = Math.max(1, rngZ * escalaRaw);
             
@@ -1123,7 +1124,7 @@
 
                 ctxRaw.fillStyle = capa.color;
                 ctxRaw.strokeStyle = capa.color; 
-                ctxRaw.lineWidth = 0.5;
+                ctxRaw.lineWidth = 1.0; // Un poco más grueso para evitar micro-gaps y rayas de dibujo
 
                 for (let i = 0; i < capa.caras.length; i += CHUNK_FACES * 3) {
                     ctxRaw.beginPath(); 
@@ -1137,7 +1138,7 @@
 
                         let x0 = (v0.s - dataProyeccion2D.minS) * escalaRaw;
                         let y0 = rawMeshCanvas.height - (v0.z - dataProyeccion2D.minZ_grid) * escalaRaw;
-                        let x1 = (v0.s - dataProyeccion2D.minS) * escalaRaw;
+                        let x1 = (v1.s - dataProyeccion2D.minS) * escalaRaw;
                         let y1 = rawMeshCanvas.height - (v1.z - dataProyeccion2D.minZ_grid) * escalaRaw;
                         let x2 = (v2.s - dataProyeccion2D.minS) * escalaRaw;
                         let y2 = rawMeshCanvas.height - (v2.z - dataProyeccion2D.minZ_grid) * escalaRaw;
@@ -1168,6 +1169,10 @@
             
             ctxCache.save();
             ctxCache.scale(dpr, dpr); 
+
+            // Forzar suavizado de imagen de alta calidad para evitar dientes de sierra y el efecto Moiré (rayas de interferencia)
+            ctxCache.imageSmoothingEnabled = true;
+            ctxCache.imageSmoothingQuality = 'high';
 
             const logicalW = canvas2D.width / dpr;
             const logicalH = canvas2D.height / dpr;
