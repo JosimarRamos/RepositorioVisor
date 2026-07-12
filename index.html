@@ -82,13 +82,17 @@
         .btn-action { background: none; border: none; cursor: pointer; font-size: 13px; padding: 2px; opacity: 0.8; transition: opacity 0.2s; }
         .btn-action:hover { opacity: 1; }
         
-        #view-2d-header { background-color: #1a1a1a; border-bottom: 1px solid var(--border-color); padding: 12px 20px; font-size: 13px; font-weight: bold; color: #ccc; display: flex; justify-content: space-between; align-items: center; white-space: nowrap; }
+        #view-2d-header { background-color: #1a1a1a; border-bottom: 1px solid var(--border-color); padding: 10px 20px; font-size: 13px; font-weight: bold; color: #ccc; display: flex; justify-content: space-between; align-items: center; white-space: nowrap; }
         
-        /* FASE 2: Buscador CSS */
-        #search-progressive { background: #111; border: 1px solid var(--border-color); color: var(--accent-color); border-radius: 4px; padding: 4px 8px; font-size: 12px; width: 85px; outline: none; transition: border-color 0.2s, background 0.2s; font-family: monospace; }
-        #search-progressive:focus { border-color: var(--accent-color); background: #222; }
-        #search-progressive::placeholder { color: #555; font-family: 'Segoe UI', sans-serif; }
-        .header-title-text { font-size: 13px; font-weight: bold; }
+        /* FASE 2: Nuevo Buscador Avanzado */
+        .search-prog-container { display: flex; align-items: center; background: #111; border: 1px solid var(--border-color); border-radius: 6px; overflow: hidden; margin-left: 10px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.5); }
+        .step-btn { background: #222; border: none; color: #aaa; padding: 4px 10px; cursor: pointer; font-size: 11px; font-weight: bold; transition: background 0.2s, color 0.2s; user-select: none; }
+        .step-btn:hover { background: var(--accent-color); color: #000; }
+        #search-progressive { background: transparent; border: none; border-left: 1px solid #333; border-right: 1px solid #333; color: var(--accent-color); padding: 4px 6px; font-size: 13px; width: 65px; text-align: center; outline: none; font-family: monospace; font-weight: bold; -moz-appearance: textfield; }
+        #search-progressive::-webkit-outer-spin-button, #search-progressive::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        #search-progressive::placeholder { color: #555; font-family: 'Segoe UI', sans-serif; font-weight: normal; }
+
+        .header-title-text { font-size: 13px; font-weight: bold; color: white; }
 
         #btn-toggle-2d { background: none; border: none; color: var(--accent-color); cursor: pointer; font-size: 14px; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 4px; transition: transform 0.3s ease, background 0.2s; }
         #btn-toggle-2d:hover { background: rgba(41, 182, 246, 0.2); }
@@ -136,16 +140,19 @@
             #btn-toggle-2d { transform: rotate(0deg); }
             #main-wrapper.is-2d-collapsed #view-2d { flex: 0 0 44px !important; height: 44px !important; overflow: hidden; }
             #main-wrapper.is-2d-collapsed #btn-toggle-2d { transform: rotate(180deg); }
-            #view-2d-header { padding: 10px; font-size: 11px; }
-            #active-profile-title { max-width: 100px; overflow: hidden; text-overflow: ellipsis; }
             
-            #dpad-container { display: none !important; }
-            #laser-info { bottom: 85px; right: 15px; padding: 10px 12px; font-size: 11px; max-width: 180px; box-shadow: 0 4px 15px rgba(0,0,0,0.6); border-radius: 6px; }
-
-            /* Ajustes Móvil Buscador */
-            .header-title-text { display: none; }
-            #search-progressive { width: 70px; font-size: 11px; }
-            .header-nav-container { padding-left: 5px !important; border-left: none !important; }
+            #view-2d-header { padding: 10px 8px; font-size: 11px; }
+            .header-title-text { display: none; } /* Oculta texto "SECCIÓN GEOFÍSICA" para hacer espacio */
+            .search-prog-container { margin-left: 0; }
+            #search-progressive { width: 55px; font-size: 11px; }
+            .step-btn { padding: 4px 6px; }
+            
+            #active-profile-title { max-width: 80px; overflow: hidden; text-overflow: ellipsis; }
+            
+            /* D-Pad ahora visible en móvil */
+            #dpad-container { transform: scale(0.85); transform-origin: bottom left; bottom: 15px; left: 15px; padding: 8px; }
+            
+            #laser-info { bottom: 25px; right: 15px; padding: 10px 12px; font-size: 11px; max-width: 150px; box-shadow: 0 4px 15px rgba(0,0,0,0.6); border-radius: 6px; }
         }
     </style>
     <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
@@ -242,20 +249,22 @@
 
             <div id="view-2d" class="viewport">
                 <div id="view-2d-header">
-                    <div style="display:flex; align-items:center; gap:8px;">
+                    <div style="display:flex; align-items:center;">
                         <button id="btn-toggle-2d" title="Ocultar/Mostrar panel 2D">▼</button>
-                        <span class="header-title-text">SECCIÓN GEOFÍSICA (2D)</span>
+                        <span class="header-title-text" style="margin-left:8px;">2D</span>
+                        
+                        <!-- FASE 2: Buscador a la Izquierda con Saltos -->
+                        <div class="search-prog-container">
+                            <button id="btn-search-minus" class="step-btn" title="Restar 50m">-50</button>
+                            <input type="number" id="search-progressive" placeholder="Prog" title="Ingresar Progresiva Exacta">
+                            <button id="btn-search-plus" class="step-btn" title="Sumar 50m">+50</button>
+                        </div>
                     </div>
 
-                    <!-- FASE 2: Nuevo buscador e integración con botonera -->
-                    <div style="display:flex; align-items:center; gap:10px;">
-                        <input type="number" id="search-progressive" placeholder="🔍 Prog. (m)" title="Buscar y anclar progresiva (Enter para centrar)">
-                        
-                        <div class="header-nav-container" style="display:flex; align-items:center; gap:6px; border-left: 1px solid #444; padding-left: 10px;">
-                            <button id="btn-prev-profile" class="btn-profile-nav" title="Perfil Anterior">◀</button>
-                            <span id="active-profile-title" style="color: var(--accent-color); font-size:12px; font-weight:bold;">[Ninguno]</span>
-                            <button id="btn-next-profile" class="btn-profile-nav" title="Perfil Siguiente">▶</button>
-                        </div>
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <button id="btn-prev-profile" class="btn-profile-nav" title="Perfil Anterior">◀</button>
+                        <span id="active-profile-title" style="color: var(--accent-color); font-size:12px; font-weight:bold;">[Ninguno]</span>
+                        <button id="btn-next-profile" class="btn-profile-nav" title="Perfil Siguiente">▶</button>
                     </div>
                 </div>
                 
@@ -323,7 +332,6 @@
         let cursorMundoS = 0, cursorMundoZ = 0;
         let isCursorActive = false;
         
-        // FASE 2: Variable global de Anclaje de Buscador
         let snapS = null; 
 
         let zoom2D = 1.0;
@@ -652,6 +660,25 @@
             }
         }
 
+        function centrarVistaEnProgresiva(S) {
+            if (!dataProyeccion2D) return;
+            const logicalW = canvas2D.width / dpr;
+            const logicalH = canvas2D.height / dpr;
+            const paddingLeft = 60;
+            const paddingRight = 60;
+            const w_canvas = logicalW - (paddingLeft + paddingRight);
+            
+            panX = (logicalW / 2) - paddingLeft - (w_canvas - dataProyeccion2D.longitud * escalaGlobal) / 2 - (S - dataProyeccion2D.minS) * escalaGlobal;
+            
+            reconstruirCacheScreen();
+            
+            // Colocar cursor justo al medio para disparar la profundidad media
+            cursorX = logicalW / 2;
+            cursorY = logicalH / 2;
+            updateCursor2D();
+            triggerCursorClick();
+        }
+
         function vincularEventosUI() {
             const bindEvent = (id, event, callback) => {
                 const el = document.getElementById(id);
@@ -671,8 +698,30 @@
             bindEvent('btn-prev-profile', 'click', () => cambiarPerfilSiguiente(-1));
             bindEvent('btn-next-profile', 'click', () => cambiarPerfilSiguiente(1));
 
-            // FASE 2: Eventos del Buscador de Progresivas
+            // FASE 2: Eventos del Buscador de Progresivas y Saltos Rápidos
             const searchInput = document.getElementById('search-progressive');
+            const btnMinus = document.getElementById('btn-search-minus');
+            const btnPlus = document.getElementById('btn-search-plus');
+
+            const jumpProgressive = (delta) => {
+                if (!dataProyeccion2D) return;
+                let current = snapS !== null ? snapS : dataProyeccion2D.minS;
+                let target;
+                if (delta > 0) target = Math.floor((current + delta) / 50) * 50;
+                else target = Math.ceil((current + delta) / 50) * 50;
+                
+                target = Math.max(dataProyeccion2D.minS, Math.min(dataProyeccion2D.maxS, target));
+                
+                searchInput.value = target;
+                snapS = target;
+                isCursorActive = true;
+                searchInput.style.color = "var(--accent-color)";
+                centrarVistaEnProgresiva(target);
+            };
+
+            btnMinus.addEventListener('click', () => jumpProgressive(-50));
+            btnPlus.addEventListener('click', () => jumpProgressive(50));
+
             searchInput.addEventListener('input', (e) => {
                 if (!dataProyeccion2D) return;
                 const val = parseFloat(e.target.value);
@@ -696,20 +745,8 @@
                     searchInput.blur();
                     searchInput.style.color = "var(--accent-color)";
                     dibu2D();
-                } else if (e.key === 'Enter' && snapS !== null && dataProyeccion2D) {
-                    // Auto-Centrado Inteligente
-                    const logicalW = canvas2D.width / dpr;
-                    const logicalH = canvas2D.height / dpr;
-                    const isMobile = window.innerWidth <= 768;
-                    const paddingLeft = 60;
-                    const paddingRight = 60;
-                    const w_canvas = logicalW - (paddingLeft + paddingRight);
-                    
-                    panX = (logicalW / 2) - paddingLeft - (w_canvas - dataProyeccion2D.longitud * escalaGlobal) / 2 - (snapS - dataProyeccion2D.minS) * escalaGlobal;
-                    reconstruirCacheScreen();
-                    
-                    cursorY = logicalH / 2; // Posiciona el cursor a la mitad vertical
-                    triggerCursorClick(); // Dispara el puntero 3D automáticamente
+                } else if (e.key === 'Enter' && snapS !== null) {
+                    centrarVistaEnProgresiva(snapS);
                 }
             });
 
@@ -779,8 +816,7 @@
 
             window.addEventListener('resize', onWindowResize);
             
-            const isMobile = window.innerWidth <= 768;
-            const factorBoton = isMobile ? 1.2 : 1.3;
+            const factorBoton = window.innerWidth <= 768 ? 1.2 : 1.3;
 
             bindEvent('btn-zoom-in', 'click', () => {
                 zoom2D = Math.min(30, zoom2D * factorBoton);
@@ -854,9 +890,7 @@
                 canvas2D.addEventListener('mouseup', (e) => {
                     if (isDragging2D) {
                         isDragging2D = false;
-                        if (!dragMoved) {
-                            triggerCursorClick();
-                        }
+                        if (!dragMoved) triggerCursorClick();
                     }
                 });
 
@@ -879,6 +913,10 @@
                         startDragY = e.touches[0].clientY - rect.top;
                         originalPanX = panX;
                         originalPanY = panY;
+                        
+                        // Show offset cursor immediately on touch
+                        cursorX = startDragX; cursorY = startDragY;
+                        isCursorActive = true; updateCursor2D();
                     } else if (e.touches.length === 2) {
                         isPinchZooming = true;
                         const dx = e.touches[0].clientX - e.touches[1].clientX;
@@ -915,6 +953,9 @@
                             panX = originalPanX + dx;
                             panY = originalPanY + dy;
                             reconstruirCacheScreen();
+                        } else {
+                            // Update offset cursor
+                            cursorX = curX; cursorY = curY; updateCursor2D();
                         }
                     }
                 }, { passive: false });
@@ -1231,7 +1272,6 @@
 
             activeProfileName = nombre;
             
-            // Reiniciar anclaje y limpiador
             snapS = null;
             const searchInput = document.getElementById('search-progressive');
             if (searchInput) {
@@ -1255,7 +1295,6 @@
             clickedPoint2D = null;
             laserMesh.visible = false;
             document.getElementById('laser-info').style.display = 'none';
-            document.getElementById('dpad-container').style.display = 'none';
             isCursorActive = false;
 
             await new Promise(r => setTimeout(r, 20));
@@ -1352,10 +1391,6 @@
             if (myRenderId === currentRenderId) {
                 titleEl.innerText = nombre.replace(".json", "");
                 titleEl.style.color = "var(--accent-color)";
-                
-                if (window.innerWidth > 768) {
-                    document.getElementById('dpad-container').style.display = 'flex';
-                }
                 isProcessing2D = false;
             }
         }
@@ -1509,7 +1544,6 @@
         function updateCursor2D() {
             if (!dataProyeccion2D || isProcessing2D || !isCursorActive) return;
 
-            // FASE 2: Forzado de Posición Cursor en Modo Anclaje (Snap)
             if (snapS !== null) {
                 cursorX = transX + (snapS - dataProyeccion2D.minS) * escalaGlobal;
                 cursorMundoS = snapS;
@@ -1534,42 +1568,18 @@
                 <div style="font-size:10px; color:#888;">Elev: ${cursorMundoZ.toFixed(1)} m</div>
             `;
             
-            if (isMobile) {
-                ctx2D.save();
-                ctx2D.scale(dpr, dpr);
-
-                // FASE 2: Línea de anclaje (Snap) en versión móvil
-                if (snapS !== null) {
-                    ctx2D.strokeStyle = "var(--accent-color)"; ctx2D.lineWidth = 1.5; ctx2D.setLineDash([]);
-                    ctx2D.beginPath(); ctx2D.moveTo(cursorX, 0); ctx2D.lineTo(cursorX, logicalH); ctx2D.stroke();
-                    
-                    ctx2D.strokeStyle = "rgba(41, 182, 246, 0.4)"; ctx2D.lineWidth = 1; ctx2D.setLineDash([4, 4]); 
-                    ctx2D.beginPath(); ctx2D.moveTo(0, cursorY); ctx2D.lineTo(logicalW, cursorY); ctx2D.stroke();
-                } else {
-                    ctx2D.strokeStyle = "rgba(41, 182, 246, 0.4)"; ctx2D.lineWidth = 1; ctx2D.setLineDash([4, 4]); 
-                    ctx2D.beginPath();
-                    ctx2D.moveTo(0, cursorY); ctx2D.lineTo(logicalW, cursorY);
-                    ctx2D.moveTo(cursorX, 0); ctx2D.lineTo(cursorX, logicalH); 
-                    ctx2D.stroke(); 
-                }
-                
-                ctx2D.setLineDash([]); 
-                ctx2D.restore();
-
-                tooltip2D.style.display = 'block';
-                tooltip2D.style.left = `${cursorX + canvas2D.getBoundingClientRect().left + 15}px`; 
-                tooltip2D.style.top = `${cursorY + canvas2D.getBoundingClientRect().top - 45}px`;
-                tooltip2D.innerHTML = uiTooltipHTML;
-                return;
-            }
-
             ctx2D.save();
             ctx2D.scale(dpr, dpr);
 
-            // FASE 2: Línea de anclaje (Snap) en versión de escritorio
+            // FASE 2: Línea de Anclaje de Alto Contraste (Snap Line)
             if (snapS !== null) {
-                ctx2D.strokeStyle = "var(--accent-color)"; ctx2D.lineWidth = 2; ctx2D.setLineDash([]);
+                ctx2D.strokeStyle = "#ffeb3b"; // Amarillo Neón
+                ctx2D.lineWidth = 2.5; 
+                ctx2D.setLineDash([]);
+                ctx2D.shadowColor = "rgba(0,0,0,0.8)"; // Sombra para destacar
+                ctx2D.shadowBlur = 4;
                 ctx2D.beginPath(); ctx2D.moveTo(cursorX, 0); ctx2D.lineTo(cursorX, logicalH); ctx2D.stroke();
+                ctx2D.shadowBlur = 0; // reset
                 
                 ctx2D.strokeStyle = "rgba(41, 182, 246, 0.6)"; ctx2D.lineWidth = 1; ctx2D.setLineDash([4, 4]); 
                 ctx2D.beginPath(); ctx2D.moveTo(0, cursorY); ctx2D.lineTo(logicalW, cursorY); ctx2D.stroke();
@@ -1582,10 +1592,18 @@
             }
             ctx2D.setLineDash([]); 
 
-            const lupaRadius = 70; 
+            // FASE 2: Offset Lupa en Celular
+            const lupaRadius = isMobile ? 55 : 70; 
             const zoomLevel = 3;   
+            let drawLupaX = cursorX;
+            let drawLupaY = cursorY;
             
-            ctx2D.beginPath(); ctx2D.arc(cursorX, cursorY, lupaRadius, 0, Math.PI * 2); ctx2D.clip();
+            if (isMobile) {
+                // Sube la lupa 80 pixeles por encima del dedo
+                drawLupaY = Math.max(lupaRadius + 5, cursorY - 80); 
+            }
+            
+            ctx2D.beginPath(); ctx2D.arc(drawLupaX, drawLupaY, lupaRadius, 0, Math.PI * 2); ctx2D.clip();
             ctx2D.fillStyle = "#0a0a0a"; ctx2D.fill();
 
             ctx2D.imageSmoothingEnabled = false;
@@ -1599,22 +1617,44 @@
             const sWidth = (physLupaRadius * 2) / zoomLevel;
             const sHeight = (physLupaRadius * 2) / zoomLevel;
             
-            ctx2D.drawImage(canvas2DCache, sx, sy, sWidth, sHeight, cursorX - lupaRadius, cursorY - lupaRadius, lupaRadius * 2, lupaRadius * 2);
+            ctx2D.drawImage(canvas2DCache, sx, sy, sWidth, sHeight, drawLupaX - lupaRadius, drawLupaY - lupaRadius, lupaRadius * 2, lupaRadius * 2);
+            
+            // FASE 2: Proyectar el punto seleccionado previo dentro de la Lupa
+            if (clickedPoint2D) {
+                const px = transX + (clickedPoint2D.s - dataProyeccion2D.minS) * escalaGlobal;
+                const py = transY - (clickedPoint2D.z - dataProyeccion2D.minZ_grid) * escalaGlobal;
+                
+                // Si el punto cae dentro del rectangulo fuente del recorte
+                if (px >= sx/dpr && px <= (sx+sWidth)/dpr && py >= sy/dpr && py <= (sy+sHeight)/dpr) {
+                    const lX = (drawLupaX - lupaRadius) + ((px * dpr - sx) / sWidth) * (lupaRadius * 2);
+                    const lY = (drawLupaY - lupaRadius) + ((py * dpr - sy) / sHeight) * (lupaRadius * 2);
+                    
+                    ctx2D.strokeStyle = "#ff5252"; ctx2D.lineWidth = 1.5 * zoomLevel;
+                    ctx2D.beginPath(); ctx2D.arc(lX, lY, 10 * zoomLevel, 0, Math.PI*2); ctx2D.stroke();
+                    ctx2D.fillStyle = "#ff5252";
+                    ctx2D.beginPath(); ctx2D.arc(lX, lY, 3 * zoomLevel, 0, Math.PI*2); ctx2D.fill();
+                }
+            }
+
             ctx2D.imageSmoothingEnabled = true;
 
-            ctx2D.strokeStyle = "var(--accent-color)"; ctx2D.lineWidth = 1.5;
+            // FASE 2: Crosshair interno super nítido
+            ctx2D.strokeStyle = "rgba(255, 255, 255, 0.9)"; ctx2D.lineWidth = 1.5;
             ctx2D.beginPath();
-            ctx2D.moveTo(cursorX - 10, cursorY); ctx2D.lineTo(cursorX + 10, cursorY);
-            ctx2D.moveTo(cursorX, cursorY - 10); ctx2D.lineTo(cursorX, cursorY + 10);
+            ctx2D.moveTo(drawLupaX - 10, drawLupaY); ctx2D.lineTo(drawLupaX + 10, drawLupaY);
+            ctx2D.moveTo(drawLupaX, drawLupaY - 10); ctx2D.lineTo(drawLupaX, drawLupaY + 10);
             ctx2D.stroke();
+            
+            ctx2D.fillStyle = "var(--accent-color)";
+            ctx2D.beginPath(); ctx2D.arc(drawLupaX, drawLupaY, 2, 0, Math.PI*2); ctx2D.fill();
 
             ctx2D.lineWidth = 3; ctx2D.strokeStyle = "#ffffff";
-            ctx2D.beginPath(); ctx2D.arc(cursorX, cursorY, lupaRadius, 0, Math.PI * 2); ctx2D.stroke();
+            ctx2D.beginPath(); ctx2D.arc(drawLupaX, drawLupaY, lupaRadius, 0, Math.PI * 2); ctx2D.stroke();
             ctx2D.restore();
 
             tooltip2D.style.display = 'block';
-            tooltip2D.style.left = `${cursorX + canvas2D.getBoundingClientRect().left + lupaRadius + 10}px`; 
-            tooltip2D.style.top = `${cursorY + canvas2D.getBoundingClientRect().top - 20}px`;
+            tooltip2D.style.left = `${cursorX + canvas2D.getBoundingClientRect().left + (isMobile ? 15 : lupaRadius + 10)}px`; 
+            tooltip2D.style.top = `${cursorY + canvas2D.getBoundingClientRect().top - (isMobile ? 45 : 20)}px`;
             tooltip2D.innerHTML = uiTooltipHTML;
         }
 
