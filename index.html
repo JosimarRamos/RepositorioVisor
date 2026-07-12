@@ -7,11 +7,12 @@
     <style>
         :root {
             --bg-color: #0f0f0f;
-            --sidebar-bg: #1a1a1a;
-            --border-color: #333333;
+            --sidebar-bg: #1e1e1e; /* Gris oscuro elegante */
+            --panel-bg: #2a2a2a;
+            --border-color: #3a3a3a;
             --text-color: #e0e0e0;
-            --accent-color: #00bcd4;
-            --accent-hover: #008ba3;
+            --accent-color: #29b6f6; /* Azul claro estilo móvil */
+            --accent-hover: #039be5;
             --danger-color: #ff5252;
             --sidebar-width: 320px;
         }
@@ -37,79 +38,87 @@
         #canvas-2d { flex-grow: 1; width: 100%; height: 100%; display: block; background-color: #0a0a0a; cursor: grab; outline: none; }
         #canvas-2d:active { cursor: grabbing; }
         
-        h1 { font-size: 16px; margin: 0 0 20px 0; text-transform: uppercase; letter-spacing: 1px; color: var(--accent-color); border-bottom: 2px solid var(--border-color); padding-bottom: 10px; }
-        h2 { font-size: 11px; margin: 15px 0 8px 0; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px; }
+        /* ------------------ ACORDEONES ------------------ */
+        .accordion-item { margin-bottom: 12px; }
+        .accordion-header {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: background 0.2s, border-radius 0.2s;
+            user-select: none;
+        }
+        .accordion-header:hover { background: #333333; }
+        .accordion-header.active { border-radius: 8px 8px 0 0; border-bottom: none; }
+        .accordion-title { display: flex; align-items: center; gap: 10px; }
+        .accordion-icon { font-size: 16px; }
+        .chevron { transition: transform 0.3s; font-size: 12px; color: #aaa; }
+        .accordion-header.active .chevron { transform: rotate(180deg); }
+        .accordion-content {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-color);
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            padding: 15px;
+            display: none; 
+        }
+
+        /* ------------------ SWITCHES & CONTROLES ------------------ */
+        .setting-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
+        .setting-label { font-size: 13px; color: #ccc; }
         
-        .control-group { background: rgba(255, 255, 255, 0.03); border: 1px solid #2d2d2d; border-radius: 6px; padding: 12px; margin-bottom: 10px; }
-        label { display: block; font-size: 13px; margin-bottom: 8px; display: flex; align-items: center;}
-        
-        .input-row { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
-        input[type="color"] { flex-grow: 1; height: 30px; border: 1px solid #444; border-radius: 4px; cursor: pointer; background: #222; padding: 2px; }
-        input[type="number"], input[type="range"] { background: #222; border: 1px solid #444; color: white; border-radius: 4px; padding: 6px; font-size: 12px; }
-        input[type="range"] { width: 100%; accent-color: var(--accent-color); }
-        
+        .switch { position: relative; display: inline-block; width: 42px; height: 24px; flex-shrink: 0; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #555; transition: .3s; border-radius: 24px; }
+        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--accent-color); }
+        input:checked + .slider:before { transform: translateX(18px); }
+
+        .color-picker-container { display: flex; border: 1px solid #444; border-radius: 6px; overflow: hidden; background: #222; }
+        .color-hex { padding: 4px 8px; font-size: 12px; font-family: monospace; border-right: 1px solid #444; display: flex; align-items: center; color: #aaa; letter-spacing: 0.5px;}
+        input[type="color"] { border: none; width: 34px; height: 32px; padding: 0; background: transparent; cursor: pointer; }
+        input[type="color"]::-webkit-color-swatch-wrapper { padding: 4px; }
+        input[type="color"]::-webkit-color-swatch { border: none; border-radius: 3px; }
+
+        input[type="range"] { background: #222; border: 1px solid #444; color: white; border-radius: 4px; padding: 6px; font-size: 12px; accent-color: var(--accent-color); }
+
+        .z-input-container { position: relative; margin-top: 10px; }
+        .z-input-container label { position: absolute; top: -8px; left: 10px; background: var(--panel-bg); padding: 0 5px; font-size: 11px; color: #888; border-radius: 4px;}
+        .z-input-container input { width: 100%; box-sizing: border-box; background: transparent; padding: 12px 10px; border: 1px solid #444; border-radius: 6px; color: white; font-size: 13px; outline: none;}
+        .z-input-container input:focus { border-color: var(--accent-color); }
+
         .file-drop-zone { border: 1px dashed #555; border-radius: 8px; padding: 15px; text-align: center; background: rgba(0, 0, 0, 0.2); cursor: pointer; transition: all 0.3s ease; font-size: 12px; color: #bbb; }
-        .file-drop-zone:hover { border-color: var(--accent-color); color: var(--accent-color); background: rgba(0, 188, 212, 0.05); }
+        .file-drop-zone:hover { border-color: var(--accent-color); color: var(--accent-color); background: rgba(41, 182, 246, 0.05); }
         .file-input { display: none; }
         
-        .layer-item { display: flex; align-items: center; justify-content: space-between; background: rgba(255, 255, 255, 0.05); padding: 8px 10px; margin-bottom: 6px; border-radius: 6px; font-size: 12px; border-left: 3px solid #555; transition: border-color 0.3s; }
-        .layer-item.active-2d { background: rgba(0, 188, 212, 0.1); border-left-color: var(--accent-color); border-right: 2px solid var(--accent-color); }
+        .layer-item { display: flex; align-items: center; justify-content: space-between; background: rgba(255, 255, 255, 0.05); padding: 10px; margin-bottom: 8px; border-radius: 6px; font-size: 12px; border-left: 3px solid #555; transition: border-color 0.3s; }
+        .layer-item.active-2d { background: rgba(41, 182, 246, 0.1); border-left-color: var(--accent-color); border-right: 2px solid var(--accent-color); }
         .layer-actions { display: flex; gap: 10px; align-items: center; }
         
         .btn-action { background: none; border: none; cursor: pointer; font-size: 13px; padding: 2px; opacity: 0.8; transition: opacity 0.2s; }
         .btn-action:hover { opacity: 1; }
-        .btn-view-2d { color: #81c784; display: flex; align-items: center; gap: 4px; font-size: 11px; } 
-        .btn-del { color: var(--danger-color); font-size: 16px; font-weight: bold;} 
         
         #view-2d-header { background-color: #1a1a1a; border-bottom: 1px solid var(--border-color); padding: 12px 20px; font-size: 13px; font-weight: bold; color: #ccc; display: flex; justify-content: space-between; align-items: center; white-space: nowrap; }
         
         #btn-toggle-2d { background: none; border: none; color: var(--accent-color); cursor: pointer; font-size: 14px; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 4px; transition: transform 0.3s ease, background 0.2s; }
-        #btn-toggle-2d:hover { background: rgba(0, 188, 212, 0.2); }
+        #btn-toggle-2d:hover { background: rgba(41, 182, 246, 0.2); }
 
         #toggle-2d-sidebar { position: absolute; top: 50%; right: 0; transform: translateY(-50%); width: 24px; height: 60px; background: var(--sidebar-bg); border: 1px solid var(--border-color); border-right: none; border-radius: 8px 0 0 8px; color: var(--text-color); cursor: pointer; display: none; align-items: center; justify-content: center; z-index: 21; box-shadow: -4px 0 10px rgba(0,0,0,0.3); }
         #toggle-2d-sidebar:hover { color: var(--accent-color); }
 
-        /* Botones de navegación entre perfiles */
-        .btn-profile-nav {
-            background: rgba(255, 255, 255, 0.08);
-            border: 1px solid #444;
-            color: var(--text-color);
-            border-radius: 4px;
-            width: 26px;
-            height: 26px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 11px;
-            transition: background 0.2s, color 0.2s;
-            user-select: none;
-        }
-        .btn-profile-nav:hover {
-            background: var(--accent-color);
-            color: #000;
-            border-color: var(--accent-color);
-        }
+        .btn-profile-nav { background: rgba(255, 255, 255, 0.08); border: 1px solid #444; color: var(--text-color); border-radius: 4px; width: 26px; height: 26px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 11px; transition: background 0.2s, color 0.2s; user-select: none; }
+        .btn-profile-nav:hover { background: var(--accent-color); color: #000; border-color: var(--accent-color); }
 
         #tooltip-2d { position: absolute; background: rgba(15, 15, 15, 0.95); border: 1px solid var(--border-color); padding: 10px; border-radius: 6px; pointer-events: none; font-size: 12px; font-family: monospace; display: none; z-index: 100; color: #ddd; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
         #tooltip-2d span.val { color: var(--accent-color); font-weight: bold; }
 
-        #laser-info { 
-            position: absolute; 
-            bottom: 25px; 
-            right: 25px; 
-            background: rgba(20, 20, 20, 0.95); 
-            border: 1px solid var(--danger-color); 
-            padding: 12px 15px; 
-            border-radius: 8px; 
-            display: none; 
-            font-size: 13px; 
-            line-height: 1.4; 
-            z-index: 100; 
-            box-shadow: 0 4px 20px rgba(255, 82, 82, 0.15); 
-            pointer-events: none; 
-            max-width: 240px;
-        }
+        #laser-info { position: absolute; bottom: 25px; right: 25px; background: rgba(20, 20, 20, 0.95); border: 1px solid var(--danger-color); padding: 12px 15px; border-radius: 8px; display: none; font-size: 13px; line-height: 1.4; z-index: 100; box-shadow: 0 4px 20px rgba(255, 82, 82, 0.15); pointer-events: none; max-width: 240px; }
         #laser-info span.val { color: #81c784; font-weight: bold; }
 
         #dpad-container { position: absolute; bottom: 25px; left: 25px; display: none; flex-direction: column; align-items: center; gap: 4px; background: rgba(15, 15, 15, 0.85); padding: 12px; border-radius: 50px; border: 1px solid #444; z-index: 100; user-select: none; box-shadow: 0 4px 15px rgba(0,0,0,0.5); backdrop-filter: blur(5px); }
@@ -120,38 +129,9 @@
         #btn-center { font-size: 16px; background: #1a1a1a; color: var(--danger-color); }
         #btn-center:hover { background: var(--danger-color); color: white; border-color: var(--danger-color); }
         
-        /* Controles de zoom 2D flotantes */
-        #zoom-controls-2d {
-            position: absolute;
-            top: 60px;
-            right: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            z-index: 101;
-        }
-        .zoom-btn {
-            width: 36px;
-            height: 36px;
-            border-radius: 6px;
-            background: rgba(20, 20, 20, 0.85);
-            color: var(--text-color);
-            border: 1px solid var(--border-color);
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: background 0.2s, color 0.2s;
-            backdrop-filter: blur(4px);
-            user-select: none;
-        }
-        .zoom-btn:hover {
-            background: var(--accent-color);
-            color: #000;
-            border-color: var(--accent-color);
-        }
+        #zoom-controls-2d { position: absolute; top: 60px; right: 20px; display: flex; flex-direction: column; gap: 8px; z-index: 101; }
+        .zoom-btn { width: 36px; height: 36px; border-radius: 6px; background: rgba(20, 20, 20, 0.85); color: var(--text-color); border: 1px solid var(--border-color); font-size: 16px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s, color 0.2s; backdrop-filter: blur(4px); user-select: none; }
+        .zoom-btn:hover { background: var(--accent-color); color: #000; border-color: var(--accent-color); }
 
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
@@ -178,15 +158,7 @@
             
             #dpad-container { display: none !important; }
             
-            #laser-info { 
-                bottom: 85px; 
-                right: 15px; 
-                padding: 10px 12px; 
-                font-size: 11px; 
-                max-width: 180px;
-                box-shadow: 0 4px 15px rgba(0,0,0,0.6);
-                border-radius: 6px;
-            }
+            #laser-info { bottom: 85px; right: 15px; padding: 10px 12px; font-size: 11px; max-width: 180px; box-shadow: 0 4px 15px rgba(0,0,0,0.6); border-radius: 6px; }
         }
     </style>
     <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
@@ -202,44 +174,78 @@
 <body>
 
     <div id="main-wrapper">
-        <!-- Menú lateral colapsado por defecto -->
         <div id="sidebar" class="collapsed">
             <div id="toggle-sidebar" title="Ocultar/Mostrar panel">▶</div>
+            
+            <!-- PANEL LATERAL MODERNIZADO (FASE 1) -->
             <div id="sidebar-content">
-                <h1>Visor Geofísico</h1>
+                <h1 style="border:none; margin-bottom: 15px; font-size:16px; color: var(--accent-color); text-transform: uppercase; letter-spacing: 1px;">Visor Geofísico</h1>
                 
-                <h2>Cargar Datos (.json)</h2>
-                <div class="file-drop-zone" onclick="document.getElementById('file-loader').click()">
-                    <span id="drop-text">Cargar archivos de Terreno o Perfil</span>
-                    <input type="file" id="file-loader" class="file-input" accept=".json" multiple>
-                </div>
-                
-                <h2>Control de Terreno</h2>
-                <div class="control-group">
-                    <label><input type="checkbox" id="chk-terreno" checked style="margin-right: 8px;"> Mostrar Terreno</label>
-                    <label style="color: #ffb74d; margin-top: 8px; font-size: 12px;">
-                        <input type="checkbox" id="chk-cortinas" checked style="margin-right: 8px;"> Cortinas Transparentes
-                    </label>
-                    
-                    <div class="input-row" style="margin-top:12px;">
-                        <label style="margin:0; width:65px;">Color:</label>
-                        <input type="color" id="color-terreno" value="#304120">
+                <!-- ACORDEÓN 1 -->
+                <div class="accordion-item">
+                    <div class="accordion-header active" onclick="toggleAccordion(this)">
+                        <div class="accordion-title"><span class="accordion-icon">🗄️</span> 1. IMPORTAR DATOS (JSON)</div>
+                        <span class="chevron">▲</span>
                     </div>
-                    <div class="input-row" style="margin-top:12px;">
-                        <label style="margin:0; width:65px;">Opacidad:</label>
-                        <input type="range" id="opacity-terreno" min="0" max="1" step="0.05" value="0.70">
+                    <div class="accordion-content" style="display: block;">
+                        <div class="file-drop-zone" onclick="document.getElementById('file-loader').click()">
+                            <span id="drop-text">Cargar archivos de Terreno o Perfil</span>
+                            <input type="file" id="file-loader" class="file-input" accept=".json" multiple>
+                        </div>
                     </div>
                 </div>
-                
-                <h2>Límite de Altura Z</h2>
-                <div class="control-group">
-                    <label style="margin-bottom:8px; font-size:11px; color:#aaa;">Recorta caras por debajo de Z:</label>
-                    <input type="number" id="z-limit-input" value="3000" step="10" style="width: 100%; box-sizing: border-box;">
+
+                <!-- ACORDEÓN 2 -->
+                <div class="accordion-item">
+                    <div class="accordion-header active" onclick="toggleAccordion(this)">
+                        <div class="accordion-title"><span class="accordion-icon">⚙️</span> 2. AJUSTES DE PANTALLA & TERRENO</div>
+                        <span class="chevron">▲</span>
+                    </div>
+                    <div class="accordion-content" style="display: block;">
+                        <div class="setting-row">
+                            <span class="setting-label">Mostrar Terreno</span>
+                            <label class="switch">
+                                <input type="checkbox" id="chk-terreno" checked>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <div class="setting-row">
+                            <span class="setting-label">Cortinas Transparentes</span>
+                            <label class="switch">
+                                <input type="checkbox" id="chk-cortinas" checked>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <div class="setting-row">
+                            <span class="setting-label">Color Base</span>
+                            <div class="color-picker-container">
+                                <span class="color-hex" id="hex-terreno">#304120</span>
+                                <input type="color" id="color-terreno" value="#304120">
+                            </div>
+                        </div>
+                        <div class="setting-row" style="margin-bottom: 25px;">
+                            <span class="setting-label">Opacidad</span>
+                            <input type="range" id="opacity-terreno" min="0" max="1" step="0.05" value="0.70" style="width: 50%;">
+                        </div>
+                        
+                        <div class="z-input-container">
+                            <label>Recorte Altura (Z)</label>
+                            <input type="number" id="z-limit-input" value="3000" step="10">
+                        </div>
+                    </div>
                 </div>
-                
-                <h2>Elementos Activos</h2>
-                <div id="lista-capas" style="flex-grow: 1;">
-                    <div id="empty-list-msg" style="font-size: 12px; color: #555; text-align: center; padding: 15px; border: 1px dashed #333; border-radius: 6px;">Ningún archivo cargado</div>
+
+                <!-- ACORDEÓN 3 -->
+                <div class="accordion-item" style="flex-grow: 1; display: flex; flex-direction: column;">
+                    <div class="accordion-header active" onclick="toggleAccordion(this)">
+                        <div class="accordion-title"><span class="accordion-icon">🗺️</span> 3. CAPAS Y PERFILES ACTIVOS</div>
+                        <span class="chevron">▲</span>
+                    </div>
+                    <div class="accordion-content" style="display: block; flex-grow: 1; padding: 10px;">
+                        <div id="lista-capas">
+                            <div id="empty-list-msg" style="font-size: 12px; color: #555; text-align: center; padding: 15px; border: 1px dashed #333; border-radius: 6px;">Ningún archivo cargado</div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -258,7 +264,6 @@
                         <span>SECCIÓN GEOFÍSICA (2D)</span>
                     </div>
 
-                    <!-- Navegación directa entre perfiles mediante flechitas -->
                     <div style="display:flex; align-items:center; gap:6px;">
                         <button id="btn-prev-profile" class="btn-profile-nav" title="Perfil Anterior">◀</button>
                         <span id="active-profile-title" style="color: var(--accent-color); font-size:12px; font-weight:bold;">[Ninguno]</span>
@@ -266,7 +271,6 @@
                     </div>
                 </div>
                 
-                <!-- Botones flotantes de zoom para 2D -->
                 <div id="zoom-controls-2d">
                     <button class="zoom-btn" id="btn-zoom-in" title="Acercar">+</button>
                     <button class="zoom-btn" id="btn-zoom-out" title="Alejar">-</button>
@@ -293,6 +297,20 @@
     <script type="module">
         import * as THREE from 'three';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // Lógica Global UI (Fase 1)
+        window.toggleAccordion = function(header) {
+            header.classList.toggle('active');
+            const content = header.nextElementSibling;
+            const chevron = header.querySelector('.chevron');
+            if (header.classList.contains('active')) {
+                content.style.display = 'block';
+                chevron.innerText = '▲';
+            } else {
+                content.style.display = 'none';
+                chevron.innerText = '▼';
+            }
+        };
 
         let scene, camera, renderer, controls;
         let terrenoMesh = null;
@@ -361,7 +379,6 @@
             gridHelper.rotation.x = Math.PI / 2;
             scene.add(gridHelper);
 
-            // Esfera láser 3D clásica brillante sin oclusión
             const sg = new THREE.SphereGeometry(1, 16, 16);
             const sm = new THREE.MeshBasicMaterial({color: 0xff1744, depthTest: false});
             laserMesh = new THREE.Mesh(sg, sm);
@@ -450,14 +467,14 @@
 
             bindEvent('btn-toggle-2d', 'click', toggle2DPanel);
             bindEvent('toggle-2d-sidebar', 'click', toggle2DPanel);
-
-            // Botones de cambio directo de perfil
             bindEvent('btn-prev-profile', 'click', () => cambiarPerfilSiguiente(-1));
             bindEvent('btn-next-profile', 'click', () => cambiarPerfilSiguiente(1));
 
             bindEvent('chk-terreno', 'change', (e) => { if (terrenoMesh) terrenoMesh.visible = e.target.checked; });
             
+            // Evento actualizado para el color y el HEX
             bindEvent('color-terreno', 'input', (e) => { 
+                document.getElementById('hex-terreno').innerText = e.target.value.toUpperCase();
                 if (terrenoMesh) { 
                     if (Array.isArray(terrenoMesh.material)) {
                         terrenoMesh.material[0].color.set(e.target.value);
@@ -507,7 +524,7 @@
                             } else if (Array.isArray(data)) {
                                 construirPerfil(data, file.name);
                             }
-                        } catch (err) { alert("Error al procesar el archivo: " + err.message); }
+                        } catch (err) { alert("Error al procesar el archivo JSON: " + err.message); }
                     };
                     reader.readAsText(file);
                 }
@@ -916,7 +933,7 @@
             if (perfilesCargados[nombreArchivo]) { perfilesCargados[nombreArchivo].forEach(m => { scene.remove(m); liberarMemoriaMesh(m); }); }
             if (data.length > 0 && data[0].vertices && data[0].vertices.length > 0) obtenerOffset(data[0].vertices);
 
-            perfilesRawData[nombreArchivo] = data; // Guardamos datos puros para cambio directo por flechitas
+            perfilesRawData[nombreArchivo] = data; 
 
             const meshes = [];
             const bboxGlobal = new THREE.Box3();
@@ -938,7 +955,6 @@
                     bboxGlobal.union(geometry.boundingBox);
                 }
 
-                // Renderizado 3D sólido original (sin alterar opacidad para ver a través del terreno)
                 const mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ color: capa.color, side: THREE.DoubleSide }));
                 scene.add(mesh); meshes.push(mesh);
             });
@@ -1224,7 +1240,7 @@
                 ctx2D.save();
                 ctx2D.scale(dpr, dpr);
 
-                ctx2D.strokeStyle = "rgba(0, 188, 212, 0.4)"; ctx2D.lineWidth = 1; ctx2D.setLineDash([4, 4]); 
+                ctx2D.strokeStyle = "rgba(41, 182, 246, 0.4)"; ctx2D.lineWidth = 1; ctx2D.setLineDash([4, 4]); 
                 ctx2D.beginPath();
                 ctx2D.moveTo(0, cursorY); ctx2D.lineTo(logicalW, cursorY);
                 ctx2D.moveTo(cursorX, 0); ctx2D.lineTo(cursorX, logicalH); 
@@ -1240,7 +1256,7 @@
             ctx2D.save();
             ctx2D.scale(dpr, dpr);
 
-            ctx2D.strokeStyle = "rgba(0, 188, 212, 0.6)"; ctx2D.lineWidth = 1; ctx2D.setLineDash([4, 4]); 
+            ctx2D.strokeStyle = "rgba(41, 182, 246, 0.6)"; ctx2D.lineWidth = 1; ctx2D.setLineDash([4, 4]); 
             ctx2D.beginPath();
             ctx2D.moveTo(0, cursorY); ctx2D.lineTo(logicalW, cursorY);
             ctx2D.moveTo(cursorX, 0); ctx2D.lineTo(cursorX, logicalH); 
@@ -1266,7 +1282,7 @@
             ctx2D.drawImage(canvas2DCache, sx, sy, sWidth, sHeight, cursorX - lupaRadius, cursorY - lupaRadius, lupaRadius * 2, lupaRadius * 2);
             ctx2D.imageSmoothingEnabled = true;
 
-            ctx2D.strokeStyle = "#00bcd4"; ctx2D.lineWidth = 1.5;
+            ctx2D.strokeStyle = "var(--accent-color)"; ctx2D.lineWidth = 1.5;
             ctx2D.beginPath();
             ctx2D.moveTo(cursorX - 10, cursorY); ctx2D.lineTo(cursorX + 10, cursorY);
             ctx2D.moveTo(cursorX, cursorY - 10); ctx2D.lineTo(cursorX, cursorY + 10);
@@ -1330,6 +1346,7 @@
             updateCursor2D();
         }
 
+        // Lógica de Capas (Fase 1)
         function actualizarUILista(nombre, tipo, rawData = null) {
             const container = document.getElementById('lista-capas');
             const emptyMsg = document.getElementById('empty-list-msg');
@@ -1338,15 +1355,23 @@
             if (document.getElementById(`capa-${safeId}`)) return;
 
             const div = document.createElement('div');
-            div.id = `capa-${safeId}`; div.className = 'layer-item';
+            div.id = `capa-${safeId}`; 
+            div.className = 'layer-item';
+            
             div.innerHTML = `
-                <label style="margin:0; cursor:pointer; display:flex; align-items:center;">
-                    <input type="checkbox" checked id="chk-vis-${safeId}" style="margin-right: 8px; accent-color: var(--accent-color);">
-                    <span style="word-break: break-all; max-width: 130px; font-weight:600; color:#ddd;">${nombre.replace(".json", "")}</span>
-                </label>
-                <div class="layer-actions">
-                    ${tipo === 'perfil' ? `<button class="btn-action btn-view-2d" title="Generar proyección 2D">👁️ Vista 2D</button>` : ''}
-                    <button class="btn-action btn-del" title="Eliminar archivo">&times;</button>
+                <div style="display:flex; align-items:center; gap:10px; width:100%; overflow:hidden;">
+                    <label class="switch" style="transform: scale(0.8); transform-origin: left center;">
+                        <input type="checkbox" checked id="chk-vis-${safeId}">
+                        <span class="slider"></span>
+                    </label>
+                    <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight:500; color:#ddd; font-size: 13px;">
+                        ${nombre.replace(".json", "")}
+                    </span>
+                    <div style="flex-grow:1;"></div>
+                    <div class="layer-actions">
+                        ${tipo === 'perfil' ? `<button class="btn-action btn-view-2d" style="border: 1px solid #444; border-radius: 4px; padding: 3px 6px; color:#81c784; font-size:11px; display:flex; align-items:center; gap:4px;" title="Generar proyección 2D">👁️ Vista 2D</button>` : ''}
+                        <button class="btn-action btn-del" style="color:var(--danger-color); padding: 0 4px; font-size:14px; font-weight:bold;" title="Eliminar archivo">&times;</button>
+                    </div>
                 </div>`;
 
             div.querySelector(`#chk-vis-${safeId}`).addEventListener('change', (e) => {
