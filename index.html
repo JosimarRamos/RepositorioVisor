@@ -7,11 +7,11 @@
     <style>
         :root {
             --bg-color: #0f0f0f;
-            --sidebar-bg: #1e1e1e; /* Gris oscuro elegante */
+            --sidebar-bg: #1e1e1e;
             --panel-bg: #2a2a2a;
             --border-color: #3a3a3a;
             --text-color: #e0e0e0;
-            --accent-color: #29b6f6; /* Azul claro estilo móvil */
+            --accent-color: #29b6f6;
             --accent-hover: #039be5;
             --danger-color: #ff5252;
             --sidebar-width: 320px;
@@ -22,35 +22,12 @@
 
         #sidebar { width: var(--sidebar-width); background: var(--sidebar-bg); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; transition: width 0.3s ease; position: relative; z-index: 20; flex-shrink: 0; }
         #sidebar.collapsed { width: 0; border-right: none; }
-        #sidebar-content { padding: 20px; overflow-y: auto; flex-grow: 1; width: var(--sidebar-width); box-sizing: border-box; transition: opacity 0.2s ease; }
+        #sidebar-content { padding: 20px; padding-top: 60px; overflow-y: auto; flex-grow: 1; width: var(--sidebar-width); box-sizing: border-box; transition: opacity 0.2s ease; }
         #sidebar.collapsed #sidebar-content { opacity: 0; pointer-events: none; }
 
-        /* Botón hamburguesa flotante en la escena 3D */
-        #btn-hamburger {
-            position: absolute;
-            top: 15px;
-            left: 15px;
-            z-index: 100; /* Por encima de la escena 3D */
-            background: rgba(30, 30, 30, 0.9);
-            border: 1px solid var(--border-color);
-            color: var(--text-color);
-            border-radius: 6px;
-            width: 38px;
-            height: 38px;
-            font-size: 20px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-            backdrop-filter: blur(4px);
-            transition: background 0.2s, color 0.2s, border-color 0.2s;
-        }
-        #btn-hamburger:hover {
-            background: var(--accent-color);
-            color: #000;
-            border-color: var(--accent-color);
-        }
+        /* Botón Sándwich (Hamburger Menu) */
+        #toggle-sidebar { position: absolute; top: 15px; right: -42px; width: 42px; height: 42px; background: var(--sidebar-bg); border: 1px solid var(--border-color); border-left: none; border-radius: 0 8px 8px 0; color: var(--text-color); cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 21; box-shadow: 4px 0 10px rgba(0,0,0,0.3); font-size: 20px; transition: color 0.2s, background 0.2s; }
+        #toggle-sidebar:hover { color: var(--accent-color); }
 
         #views-container { display: flex; flex-grow: 1; width: 0; flex-direction: row; }
         .viewport { position: relative; flex: 1; height: 100%; box-sizing: border-box; min-height: 0; min-width: 0; }
@@ -62,38 +39,18 @@
         #canvas-2d { flex-grow: 1; width: 100%; height: 100%; display: block; background-color: #0a0a0a; cursor: grab; outline: none; }
         #canvas-2d:active { cursor: grabbing; }
         
-        /* ------------------ ACORDEONES ------------------ */
+        /* ACORDEONES */
         .accordion-item { margin-bottom: 12px; }
-        .accordion-header {
-            background: var(--panel-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 12px 15px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            cursor: pointer;
-            font-size: 13px;
-            font-weight: 600;
-            transition: background 0.2s, border-radius 0.2s;
-            user-select: none;
-        }
+        .accordion-header { background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-size: 13px; font-weight: 600; transition: background 0.2s, border-radius 0.2s; user-select: none; }
         .accordion-header:hover { background: #333333; }
         .accordion-header.active { border-radius: 8px 8px 0 0; border-bottom: none; }
         .accordion-title { display: flex; align-items: center; gap: 10px; }
         .accordion-icon { font-size: 16px; }
         .chevron { transition: transform 0.3s; font-size: 12px; color: #aaa; }
         .accordion-header.active .chevron { transform: rotate(180deg); }
-        .accordion-content {
-            background: rgba(255, 255, 255, 0.02);
-            border: 1px solid var(--border-color);
-            border-top: none;
-            border-radius: 0 0 8px 8px;
-            padding: 15px;
-            display: none; 
-        }
+        .accordion-content { background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-color); border-top: none; border-radius: 0 0 8px 8px; padding: 15px; display: none; }
 
-        /* ------------------ SWITCHES & CONTROLES ------------------ */
+        /* SWITCHES & CONTROLES */
         .setting-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
         .setting-label { font-size: 13px; color: #ccc; }
         
@@ -139,8 +96,7 @@
         .btn-profile-nav { background: rgba(255, 255, 255, 0.08); border: 1px solid #444; color: var(--text-color); border-radius: 4px; width: 26px; height: 26px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 11px; transition: background 0.2s, color 0.2s; user-select: none; }
         .btn-profile-nav:hover { background: var(--accent-color); color: #000; border-color: var(--accent-color); }
 
-        #tooltip-2d { position: absolute; background: rgba(15, 15, 15, 0.95); border: 1px solid var(--border-color); padding: 10px; border-radius: 6px; pointer-events: none; font-size: 12px; font-family: monospace; display: none; z-index: 100; color: #ddd; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
-        #tooltip-2d span.val { color: var(--accent-color); font-weight: bold; }
+        #tooltip-2d { position: absolute; background: rgba(15, 15, 15, 0.95); border: 1px solid var(--border-color); padding: 8px 12px; border-radius: 6px; pointer-events: none; font-family: 'Segoe UI', sans-serif; display: none; z-index: 100; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
 
         #laser-info { position: absolute; bottom: 25px; right: 25px; background: rgba(20, 20, 20, 0.95); border: 1px solid var(--danger-color); padding: 12px 15px; border-radius: 8px; display: none; font-size: 13px; line-height: 1.4; z-index: 100; box-shadow: 0 4px 20px rgba(255, 82, 82, 0.15); pointer-events: none; max-width: 240px; }
         #laser-info span.val { color: #81c784; font-weight: bold; }
@@ -171,7 +127,7 @@
         @media (max-width: 768px) {
             #views-container { flex-direction: column; }
             #view-3d { border-right: none; border-bottom: 2px solid var(--border-color); }
-            #sidebar { position: absolute; height: 100vh; height: 100dvh; left: 0; top: 0; max-width: 85vw; z-index: 1000; box-shadow: 2px 0 15px rgba(0,0,0,0.5); }
+            #sidebar { position: absolute; height: 100vh; left: 0; top: 0; max-width: 85vw; z-index: 1000; box-shadow: 2px 0 15px rgba(0,0,0,0.5); }
             #sidebar.collapsed { width: 0; border-right: none; box-shadow: none; }
             #sidebar-content { padding-bottom: 120px !important; }
             #btn-toggle-2d { transform: rotate(0deg); }
@@ -199,35 +155,32 @@
 
     <div id="main-wrapper">
         <div id="sidebar" class="collapsed">
-            <!-- PANEL LATERAL MODERNIZADO -->
+            <!-- BOTÓN SÁNDWICH MODERNIZADO -->
+            <div id="toggle-sidebar" title="Ocultar/Mostrar panel">☰</div>
+            
             <div id="sidebar-content">
-                <h1 style="border:none; margin-bottom: 15px; font-size:16px; color: var(--accent-color); text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; gap: 10px;">
-                    <!-- Hamburguesa funcional para cerrar menú, excelente en móviles -->
-                    <span id="btn-sidebar-close" style="cursor: pointer; color: var(--text-color);" title="Cerrar panel">☰</span>
-                    Visor Geofísico
-                </h1>
+                <h1 style="border:none; margin-bottom: 15px; font-size:16px; color: var(--accent-color); text-transform: uppercase; letter-spacing: 1px; margin-top:0;">Visor Geofísico</h1>
                 
-                <!-- ACORDEÓN 1 (Compactado por defecto) -->
                 <div class="accordion-item">
-                    <div class="accordion-header" onclick="toggleAccordion(this)">
-                        <div class="accordion-title"><span class="accordion-icon">🗄️</span> 1. IMPORTAR DATOS (JSON)</div>
-                        <span class="chevron">▼</span>
+                    <div class="accordion-header active" onclick="toggleAccordion(this)">
+                        <div class="accordion-title"><span class="accordion-icon">🗄️</span> 1. IMPORTAR DATOS</div>
+                        <span class="chevron">▲</span>
                     </div>
-                    <div class="accordion-content">
+                    <div class="accordion-content" style="display: block;">
+                        <!-- Se añadió soporte manual para txt -->
                         <div class="file-drop-zone" onclick="document.getElementById('file-loader').click()">
-                            <span id="drop-text">Cargar archivos de Terreno o Perfil</span>
-                            <input type="file" id="file-loader" class="file-input" accept=".json" multiple>
+                            <span id="drop-text">Cargar JSON (Terreno/Perfil) o TXT (Progresivas)</span>
+                            <input type="file" id="file-loader" class="file-input" accept=".json, .txt" multiple>
                         </div>
                     </div>
                 </div>
 
-                <!-- ACORDEÓN 2 (Compactado por defecto) -->
                 <div class="accordion-item">
-                    <div class="accordion-header" onclick="toggleAccordion(this)">
-                        <div class="accordion-title"><span class="accordion-icon">⚙️</span> 2. AJUSTES DE PANTALLA & TERRENO</div>
-                        <span class="chevron">▼</span>
+                    <div class="accordion-header active" onclick="toggleAccordion(this)">
+                        <div class="accordion-title"><span class="accordion-icon">⚙️</span> 2. AJUSTES DE TERRENO</div>
+                        <span class="chevron">▲</span>
                     </div>
-                    <div class="accordion-content">
+                    <div class="accordion-content" style="display: block;">
                         <div class="setting-row">
                             <span class="setting-label">Mostrar Terreno</span>
                             <label class="switch">
@@ -261,10 +214,9 @@
                     </div>
                 </div>
 
-                <!-- ACORDEÓN 3 (Abierto por defecto) -->
                 <div class="accordion-item" style="flex-grow: 1; display: flex; flex-direction: column;">
                     <div class="accordion-header active" onclick="toggleAccordion(this)">
-                        <div class="accordion-title"><span class="accordion-icon">🗺️</span> 3. CAPAS Y PERFILES ACTIVOS</div>
+                        <div class="accordion-title"><span class="accordion-icon">🗺️</span> 3. CAPAS ACTIVAS</div>
                         <span class="chevron">▲</span>
                     </div>
                     <div class="accordion-content" style="display: block; flex-grow: 1; padding: 10px;">
@@ -278,8 +230,6 @@
 
         <div id="views-container">
             <div id="view-3d" class="viewport">
-                <!-- Botón hamburguesa flotante estándar de visualizadores de mapas -->
-                <button id="btn-hamburger" title="Ocultar/Mostrar panel lateral">☰</button>
                 <div id="canvas-3d"></div>
             </div>
 
@@ -326,7 +276,7 @@
         import * as THREE from 'three';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-        // Lógica Global de Acordeones
+        // Lógica Global UI
         window.toggleAccordion = function(header) {
             header.classList.toggle('active');
             const content = header.nextElementSibling;
@@ -344,8 +294,13 @@
         let terrenoMesh = null;
         let terrenoCrudoData = null; 
         let nombreArchivoTerreno = null; 
+        
         const perfilesCargados = {}; 
         const perfilesRawData = {}; 
+        
+        // FASE 1: Estructura de almacenamiento de datos TXT
+        const progresivasCargadas = {}; 
+
         let centerOffset = null; 
         let activeProfileName = null; 
 
@@ -407,6 +362,7 @@
             gridHelper.rotation.x = Math.PI / 2;
             scene.add(gridHelper);
 
+            // Sonda Lumínica Básica (Será mejorada en Fase 3)
             const sg = new THREE.SphereGeometry(1, 16, 16);
             const sm = new THREE.MeshBasicMaterial({color: 0xff1744, depthTest: false});
             laserMesh = new THREE.Mesh(sg, sm);
@@ -436,7 +392,7 @@
 
             const nombresPerfiles = ['Perfil1.json', 'Perfil2.json', 'Perfil3.json', 'Perfil4.json'];
             let primerPerfilCargado = null;
-            let textPrimerPerfil = "";
+            let nombrePrimerPerfil = "";
 
             for (const nombre of nombresPerfiles) {
                 try {
@@ -447,7 +403,15 @@
                         
                         if (!primerPerfilCargado) {
                             primerPerfilCargado = dataPerfil;
-                            textPrimerPerfil = nombre;
+                            nombrePrimerPerfil = nombre;
+                        }
+
+                        // FASE 1: Asociación automática Perfil -> Archivo TXT
+                        const nombreTXT = nombre.replace('Perfil', 'PL').replace('.json', '.txt');
+                        const resTXT = await fetch(nombreTXT);
+                        if (resTXT.ok) {
+                            const txtData = await resTXT.text();
+                            procesarProgresivasTXT(txtData, nombreTXT);
                         }
                     }
                 } catch (e) {
@@ -456,8 +420,86 @@
             }
 
             if (primerPerfilCargado) {
-                activarPerfil2D(textPrimerPerfil, primerPerfilCargado);
+                activarPerfil2D(nombrePrimerPerfil, primerPerfilCargado);
             }
+        }
+
+        // FASE 1: Parser de Progresivas Reales (PLX.txt)
+        function procesarProgresivasTXT(text, filename) {
+            const lines = text.trim().split('\n');
+            const data = [];
+            for(let line of lines) {
+                // Regex robusto para separar espacios múltiples o tabulaciones
+                const parts = line.trim().split(/\s+/);
+                if(parts.length >= 5) {
+                    const id = parseInt(parts[0]);
+                    const x = parseFloat(parts[1]);
+                    const y = parseFloat(parts[2]);
+                    const z = parseFloat(parts[3]);
+                    const s = parseFloat(parts[4]);
+                    
+                    if (!isNaN(x) && !isNaN(y) && !isNaN(z) && !isNaN(s)) {
+                        data.push({ id, x, y, z, s });
+                    }
+                }
+            }
+            if(data.length > 0) {
+                data.sort((a,b) => a.s - b.s); // Asegurar orden ascendente de progresiva
+                progresivasCargadas[filename] = data;
+                actualizarUILista(filename, 'progresiva');
+            } else {
+                console.warn("No se encontraron datos válidos en el archivo TXT: " + filename);
+            }
+        }
+
+        // FASE 1: Algoritmo de Interpolación Matemática Exacta
+        function obtenerCoordenadasReales(S) {
+            if (!activeProfileName) return null;
+            
+            // Deducir el archivo txt asociado al JSON activo
+            const txtName = activeProfileName.replace('Perfil', 'PL').replace('.json', '.txt');
+            let txtData = progresivasCargadas[txtName];
+            
+            // Si el nombre no es estándar (carga manual), intentamos solo reemplazar extensión
+            if (!txtData) {
+                const altName = activeProfileName.replace('.json', '.txt');
+                txtData = progresivasCargadas[altName];
+            }
+
+            if (!txtData || txtData.length === 0) return null;
+            if (txtData.length === 1) return { x: txtData[0].x, y: txtData[0].y, z: txtData[0].z, s: txtData[0].s };
+
+            let p1 = txtData[0];
+            let p2 = txtData[txtData.length - 1];
+
+            // Identificar los dos puntos entre los que se encuentra la progresiva S o hacer extrapolación
+            if (S <= p1.s) {
+                // Extrapolar hacia atrás
+                p2 = txtData[1]; 
+            } else if (S >= p2.s) {
+                // Extrapolar hacia adelante
+                p1 = txtData[txtData.length - 2]; 
+            } else {
+                // Interpolación normal
+                for(let i = 0; i < txtData.length - 1; i++) {
+                    if (S >= txtData[i].s && S <= txtData[i+1].s) {
+                        p1 = txtData[i];
+                        p2 = txtData[i+1];
+                        break;
+                    }
+                }
+            }
+
+            // Cálculo del Factor T paramétrico
+            const range = p2.s - p1.s;
+            const t = (range === 0) ? 0 : (S - p1.s) / range;
+            
+            return {
+                x: p1.x + t * (p2.x - p1.x),
+                y: p1.y + t * (p2.y - p1.y),
+                z: p1.z + t * (p2.z - p1.z), // Z_superficie real interpolado
+                s: S
+            };
         }
 
         function toggle2DPanel() {
@@ -486,14 +528,14 @@
                 if (el) el.addEventListener(event, callback);
             }
 
-            // Nueva lógica unificada de colapso/despliegue del panel con el ícono de hamburguesa
-            const toggleSidebarFn = () => {
+            // BOTÓN SÁNDWICH LÓGICA
+            bindEvent('toggle-sidebar', 'click', () => {
                 const sidebar = document.getElementById('sidebar');
                 sidebar.classList.toggle('collapsed');
+                const btn = document.getElementById('toggle-sidebar');
+                btn.innerHTML = sidebar.classList.contains('collapsed') ? '☰' : '✕';
                 setTimeout(onWindowResize, 310);
-            };
-            bindEvent('btn-hamburger', 'click', toggleSidebarFn);
-            bindEvent('btn-sidebar-close', 'click', toggleSidebarFn);
+            });
 
             bindEvent('btn-toggle-2d', 'click', toggle2DPanel);
             bindEvent('toggle-2d-sidebar', 'click', toggle2DPanel);
@@ -545,15 +587,20 @@
                 for (let file of files) {
                     const reader = new FileReader();
                     reader.onload = function(event) {
-                        try {
-                            const data = JSON.parse(event.target.result);
-                            if (data.tipo === "terreno") {
-                                terrenoCrudoData = data; nombreArchivoTerreno = file.name;
-                                construirTerreno(data, file.name);
-                            } else if (Array.isArray(data)) {
-                                construirPerfil(data, file.name);
-                            }
-                        } catch (err) { alert("Error al procesar el archivo JSON: " + err.message); }
+                        // Soporte Dual: JSON (Geometría) o TXT (Progresivas Reales)
+                        if (file.name.toLowerCase().endsWith('.txt')) {
+                            procesarProgresivasTXT(event.target.result, file.name);
+                        } else {
+                            try {
+                                const data = JSON.parse(event.target.result);
+                                if (data.tipo === "terreno") {
+                                    terrenoCrudoData = data; nombreArchivoTerreno = file.name;
+                                    construirTerreno(data, file.name);
+                                } else if (Array.isArray(data)) {
+                                    construirPerfil(data, file.name);
+                                }
+                            } catch (err) { alert("Error al procesar el archivo JSON: " + err.message); }
+                        }
                     };
                     reader.readAsText(file);
                 }
@@ -1106,8 +1153,7 @@
             const rngS = Math.max(dataProyeccion2D.maxS - dataProyeccion2D.minS, 1);
             const rngZ = Math.max(dataProyeccion2D.maxZ_grid - dataProyeccion2D.minZ_grid, 1);
 
-            // Optimización de resolución interna: 4096px es el dulce punto para nitidez Retina/4K sin generar efecto Moiré (rayas) ni lentitud.
-            rawMeshCanvas.width = 4096; 
+            rawMeshCanvas.width = 8192; 
             escalaRaw = rawMeshCanvas.width / rngS;
             rawMeshCanvas.height = Math.max(1, rngZ * escalaRaw);
             
@@ -1124,7 +1170,7 @@
 
                 ctxRaw.fillStyle = capa.color;
                 ctxRaw.strokeStyle = capa.color; 
-                ctxRaw.lineWidth = 1.0; // Un poco más grueso para evitar micro-gaps y rayas de dibujo
+                ctxRaw.lineWidth = 0.5;
 
                 for (let i = 0; i < capa.caras.length; i += CHUNK_FACES * 3) {
                     ctxRaw.beginPath(); 
@@ -1169,10 +1215,6 @@
             
             ctxCache.save();
             ctxCache.scale(dpr, dpr); 
-
-            // Forzar suavizado de imagen de alta calidad para evitar dientes de sierra y el efecto Moiré (rayas de interferencia)
-            ctxCache.imageSmoothingEnabled = true;
-            ctxCache.imageSmoothingQuality = 'high';
 
             const logicalW = canvas2D.width / dpr;
             const logicalH = canvas2D.height / dpr;
@@ -1267,8 +1309,13 @@
 
             const logicalW = canvas2D.width / dpr;
             const logicalH = canvas2D.height / dpr;
-
             const isMobile = window.innerWidth <= 768;
+
+            // FASE 2 UI PREP: Diseño limpio priorizando S sobre Z
+            const uiTooltipHTML = `
+                <div style="font-size:14px; font-weight:bold; color:var(--accent-color); margin-bottom: 2px;">Prog: ${cursorMundoS.toFixed(1)} m</div>
+                <div style="font-size:10px; color:#888;">Elev: ${cursorMundoZ.toFixed(1)} m</div>
+            `;
             
             if (isMobile) {
                 ctx2D.save();
@@ -1283,7 +1330,7 @@
                 tooltip2D.style.display = 'block';
                 tooltip2D.style.left = `${cursorX + canvas2D.getBoundingClientRect().left + 15}px`; 
                 tooltip2D.style.top = `${cursorY + canvas2D.getBoundingClientRect().top - 45}px`;
-                tooltip2D.innerHTML = `S: <span class="val">${cursorMundoS.toFixed(1)} m</span><br>Z: <span class="val">${cursorMundoZ.toFixed(1)} m</span>`;
+                tooltip2D.innerHTML = uiTooltipHTML;
                 return;
             }
 
@@ -1329,7 +1376,7 @@
             tooltip2D.style.display = 'block';
             tooltip2D.style.left = `${cursorX + canvas2D.getBoundingClientRect().left + lupaRadius + 10}px`; 
             tooltip2D.style.top = `${cursorY + canvas2D.getBoundingClientRect().top - 20}px`;
-            tooltip2D.innerHTML = `S: <span class="val">${cursorMundoS.toFixed(1)} m</span><br>Z: <span class="val">${cursorMundoZ.toFixed(1)} m</span>`;
+            tooltip2D.innerHTML = uiTooltipHTML;
         }
 
         function triggerCursorClick() {
@@ -1338,11 +1385,24 @@
 
             clickedPoint2D = { s: cursorMundoS, z: cursorMundoZ };
 
-            const xOrig = dataProyeccion2D.pStart.x + dataProyeccion2D.uX * cursorMundoS;
-            const yOrig = dataProyeccion2D.pStart.y + dataProyeccion2D.uY * cursorMundoS;
-            const xScene = xOrig - centerOffset.x;
-            const yScene = yOrig - centerOffset.y;
-            const zScene = cursorMundoZ - centerOffset.z;
+            // FASE 1: Usar algoritmo matemático de interpolación 3D si hay datos .txt reales. 
+            // Si no hay (modo antiguo), hacemos fallback al eje recto simplificado.
+            let coordsReales = obtenerCoordenadasReales(cursorMundoS);
+            let xScene, yScene, zScene;
+
+            if (coordsReales) {
+                // Cálculo 3D con datos topográficos reales de las progresivas
+                xScene = coordsReales.x - centerOffset.x;
+                yScene = coordsReales.y - centerOffset.y;
+                zScene = cursorMundoZ - centerOffset.z;
+            } else {
+                // Fallback aproximado anterior
+                const xOrig = dataProyeccion2D.pStart.x + dataProyeccion2D.uX * cursorMundoS;
+                const yOrig = dataProyeccion2D.pStart.y + dataProyeccion2D.uY * cursorMundoS;
+                xScene = xOrig - centerOffset.x;
+                yScene = yOrig - centerOffset.y;
+                zScene = cursorMundoZ - centerOffset.z;
+            }
 
             if (Number.isFinite(xScene) && Number.isFinite(yScene) && Number.isFinite(zScene)) {
                 laserMesh.position.set(xScene, yScene, zScene);
@@ -1384,6 +1444,7 @@
             const container = document.getElementById('lista-capas');
             const emptyMsg = document.getElementById('empty-list-msg');
             if (emptyMsg) emptyMsg.remove();
+            
             const safeId = nombre.replace(/[^a-zA-Z0-9]/g, '_');
             if (document.getElementById(`capa-${safeId}`)) return;
 
@@ -1391,33 +1452,53 @@
             div.id = `capa-${safeId}`; 
             div.className = 'layer-item';
             
-            div.innerHTML = `
-                <div style="display:flex; align-items:center; gap:10px; width:100%; overflow:hidden;">
-                    <label class="switch" style="transform: scale(0.8); transform-origin: left center;">
-                        <input type="checkbox" checked id="chk-vis-${safeId}">
-                        <span class="slider"></span>
-                    </label>
-                    <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight:500; color:#ddd; font-size: 13px;">
-                        ${nombre.replace(".json", "")}
-                    </span>
-                    <div style="flex-grow:1;"></div>
-                    <div class="layer-actions">
-                        ${tipo === 'perfil' ? `<button class="btn-action btn-view-2d" style="border: 1px solid #444; border-radius: 4px; padding: 3px 6px; color:#81c784; font-size:11px; display:flex; align-items:center; gap:4px;" title="Generar proyección 2D">👁️ Vista 2D</button>` : ''}
-                        <button class="btn-action btn-del" style="color:var(--danger-color); padding: 0 4px; font-size:14px; font-weight:bold;" title="Eliminar archivo">&times;</button>
-                    </div>
-                </div>`;
+            // Render condicional de Interfaz dependiendo del tipo de Archivo
+            if (tipo === 'progresiva') {
+                div.innerHTML = `
+                    <div style="display:flex; align-items:center; gap:10px; width:100%; overflow:hidden;">
+                        <span style="font-size: 16px; margin-left:4px;">📍</span>
+                        <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight:500; color:#ddd; font-size: 13px;">
+                            ${nombre}
+                        </span>
+                        <div style="flex-grow:1;"></div>
+                        <div class="layer-actions">
+                            <button class="btn-action btn-del" style="color:var(--danger-color); padding: 0 4px; font-size:14px; font-weight:bold;" title="Eliminar archivo">&times;</button>
+                        </div>
+                    </div>`;
+            } else {
+                div.innerHTML = `
+                    <div style="display:flex; align-items:center; gap:10px; width:100%; overflow:hidden;">
+                        <label class="switch" style="transform: scale(0.8); transform-origin: left center;">
+                            <input type="checkbox" checked id="chk-vis-${safeId}">
+                            <span class="slider"></span>
+                        </label>
+                        <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight:500; color:#ddd; font-size: 13px;">
+                            ${nombre.replace(".json", "")}
+                        </span>
+                        <div style="flex-grow:1;"></div>
+                        <div class="layer-actions">
+                            ${tipo === 'perfil' ? `<button class="btn-action btn-view-2d" style="border: 1px solid #444; border-radius: 4px; padding: 3px 6px; color:#81c784; font-size:11px; display:flex; align-items:center; gap:4px;" title="Generar proyección 2D">👁️ Vista 2D</button>` : ''}
+                            <button class="btn-action btn-del" style="color:var(--danger-color); padding: 0 4px; font-size:14px; font-weight:bold;" title="Eliminar archivo">&times;</button>
+                        </div>
+                    </div>`;
 
-            div.querySelector(`#chk-vis-${safeId}`).addEventListener('change', (e) => {
-                if (tipo === 'terreno' && terrenoMesh) { terrenoMesh.visible = e.target.checked; document.getElementById('chk-terreno').checked = e.target.checked; } 
-                else if (tipo === 'perfil' && perfilesCargados[nombre]) { perfilesCargados[nombre].forEach(mesh => mesh.visible = e.target.checked); }
-            });
+                div.querySelector(`#chk-vis-${safeId}`).addEventListener('change', (e) => {
+                    if (tipo === 'terreno' && terrenoMesh) { terrenoMesh.visible = e.target.checked; document.getElementById('chk-terreno').checked = e.target.checked; } 
+                    else if (tipo === 'perfil' && perfilesCargados[nombre]) { perfilesCargados[nombre].forEach(mesh => mesh.visible = e.target.checked); }
+                });
 
-            if (tipo === 'perfil') div.querySelector('.btn-view-2d').addEventListener('click', () => activarPerfil2D(nombre, rawData));
+                if (tipo === 'perfil') {
+                    div.querySelector('.btn-view-2d').addEventListener('click', () => activarPerfil2D(nombre, rawData));
+                }
+            }
 
+            // Lógica de botón eliminar
             div.querySelector('.btn-del').addEventListener('click', () => {
-                if (tipo === 'terreno' && terrenoMesh) { scene.remove(terrenoMesh); liberarMemoriaMesh(terrenoMesh); terrenoMesh = null; terrenoCrudoData = null; nombreArchivoTerreno = null; } 
-                else if (tipo === 'perfil' && perfilesCargados[nombre]) {
-                    perfilesCargados[nombre].forEach(mesh => { scene.remove(mesh); liberarMemoriaMesh(mesh); }); delete perfilesCargados[nombre]; delete perfilesRawData[nombre];
+                if (tipo === 'terreno' && terrenoMesh) { 
+                    scene.remove(terrenoMesh); liberarMemoriaMesh(terrenoMesh); terrenoMesh = null; terrenoCrudoData = null; nombreArchivoTerreno = null; 
+                } else if (tipo === 'perfil' && perfilesCargados[nombre]) {
+                    perfilesCargados[nombre].forEach(mesh => { scene.remove(mesh); liberarMemoriaMesh(mesh); }); 
+                    delete perfilesCargados[nombre]; delete perfilesRawData[nombre];
                     if (activeProfileName === nombre) {
                         activeProfileName = null; dataProyeccion2D = null; currentRenderId++; isProcessing2D = false;
                         clickedPoint2D = null; laserMesh.visible = false; document.getElementById('laser-info').style.display = 'none';
@@ -1425,7 +1506,10 @@
                         document.getElementById('active-profile-title').innerText = "[Ninguno]";
                         ctx2D.fillStyle = '#0a0a0a'; ctx2D.fillRect(0, 0, canvas2D.width, canvas2D.height);
                     }
+                } else if (tipo === 'progresiva') {
+                    delete progresivasCargadas[nombre];
                 }
+                
                 div.remove();
                 if (container.children.length === 0) container.innerHTML = `<div id="empty-list-msg" style="font-size: 12px; color: #555; text-align: center; padding: 15px; border: 1px dashed #333; border-radius: 6px;">Ningún archivo cargado</div>`;
             });
