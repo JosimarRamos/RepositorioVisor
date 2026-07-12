@@ -298,7 +298,7 @@
         const perfilesCargados = {}; 
         const perfilesRawData = {}; 
         
-        // FASE 1: Estructura de almacenamiento de datos TXT
+        // FASE 1: Estructura de almacenamiento de datos TXT topográficos
         const progresivasCargadas = {}; 
 
         let centerOffset = null; 
@@ -446,7 +446,7 @@
                 data.sort((a,b) => a.s - b.s); // Asegurar orden ascendente de progresiva
                 progresivasCargadas[filename] = data;
                 actualizarUILista(filename, 'progresiva');
-                actualizarEstadoVinculoTXT(); // FASE 1 - UI: Validar conexiones
+                actualizarEstadoVinculoTXT(); // UI: Validar conexiones
             } else {
                 console.warn("No se encontraron datos válidos en el archivo TXT: " + filename);
             }
@@ -463,67 +463,189 @@
                 const altName = perfilName.replace('.json', '.txt');
                 
                 if (progresivasCargadas[txtName]) {
-                    statusEl.innerHTML = `✅ Datos topográficos vinculados: <span style="color:#fff; font-weight:bold;">${txtName}</span>`;
+                    statusEl.innerHTML = `✅ Perfil desenrollado según: <span style="color:#fff; font-weight:bold;">${txtName}</span>`;
                     statusEl.style.color = "#81c784";
                 } else if (progresivasCargadas[altName]) {
-                    statusEl.innerHTML = `✅ Datos topográficos vinculados: <span style="color:#fff; font-weight:bold;">${altName}</span>`;
+                    statusEl.innerHTML = `✅ Perfil desenrollado según: <span style="color:#fff; font-weight:bold;">${altName}</span>`;
                     statusEl.style.color = "#81c784";
                 } else {
-                    statusEl.innerHTML = `⚠️ Sin datos topográficos (Interpolación básica)`;
+                    statusEl.innerHTML = `⚠️ Sin TXT. Modo Respaldo: Curva Aproximada.`;
                     statusEl.style.color = "#ffb74d";
                 }
             }
         }
 
-        // FASE 1: Algoritmo de Interpolación Matemática Exacta
-        function obtenerCoordenadasReales(S) {
-            if (!activeProfileName) return null;
-            
-            // Deducir el archivo txt asociado al JSON activo
-            const txtName = activeProfileName.replace('Perfil', 'PL').replace('.json', '.txt');
-            let txtData = progresivasCargadas[txtName];
-            
-            // Si el nombre no es estándar (carga manual), intentamos solo reemplazar extensión
-            if (!txtData) {
-                const altName = activeProfileName.replace('.json', '.txt');
-                txtData = progresivasCargadas[altName];
+        // --------------------------------------------------------------------------
+        // FASE 1 - CORE: DESENROLLADO CURVILÍNEO (TRUE PROGRESSIVE MAPPING)
+        // --------------------------------------------------------------------------
+
+        // 1. Proyectar un Vértice 3D (X, Y) a la Poli-línea Curva (Devuelve "S")
+        function proyectarXYEnPoliLinea(x, y, poliLinea) {
+            if (!poliLinea || poliLinea.length === 0) return 0;
+            if (poliLinea.length === 1) return poliLinea[0].s;
+
+            let minDistSq = Infinity;
+            let bestS = 0;
+
+            for (let i = 0; i < poliLinea.length - 1; i++) {
+                let p1 = poliLinea[i];
+                let p2 = poliLinea[i+1];
+                
+                let dx = p2.x - p1.x;
+                let dy = p2.y - p1.y;
+                let l2 = dx*dx + dy*dy;
+                
+                let t = 0;
+                if (l2 > 0) t = ((x - p1.x) * dx + (y - p1.y) * dy) / l2;
+                
+                let tc = Math.max(0, Math.min(1, t)); // Clamped para chequear distancia ortogonal
+                
+                let px = p1.x + tc * dx;
+                let py = p1.y + tc * dy;
+                let distSq = (x - px)*(x - px) + (y - py)*(y - py);
+                
+                if (distSq < minDistSq) {
+                    minDistSq = distSq;
+                    let trueT = tc;
+                    // Permitir extrapolación en los extremos si el punto se pasa de la línea
+                    if (i === 0 && t < 0) trueT = t;
+                    if (i === poliLinea.length - 2 && t > 1) trueT = t;
+                    
+                    bestS = p1.s + trueT * (p2.s - p1.s);
+                }
             }
+            return bestS;
+        }
 
-            if (!txtData || txtData.length === 0) return null;
-            if (txtData.length === 1) return { x: txtData[0].x, y: txtData[0].y, z: txtData[0].z, s: txtData[0].s };
+        // 2. Proceso Inverso: Transformar un "S" del 2D a un (X, Y, Z) en el espacio 3D
+        function obtenerCoordenadasDesdeS(S, poliLinea) {
+            if (!poliLinea || poliLinea.length === 0) return null;
+            if (poliLinea.length === 1) return { x: poliLinea[0].x, y: poliLinea[0].y, z: poliLinea[0].z, s: S };
 
-            let p1 = txtData[0];
-            let p2 = txtData[txtData.length - 1];
+            let p1 = poliLinea[0];
+            let p2 = poliLinea[poliLinea.length - 1];
 
-            // Identificar los dos puntos entre los que se encuentra la progresiva S o hacer extrapolación
-            if (S <= p1.s) {
-                // Extrapolar hacia atrás
-                p2 = txtData[1]; 
-            } else if (S >= p2.s) {
-                // Extrapolar hacia adelante
-                p1 = txtData[txtData.length - 2]; 
+            if (S <= p1.s) { 
+                p2 = poliLinea[1]; 
+            } else if (S >= p2.s) { 
+                p1 = poliLinea[poliLinea.length - 2]; 
             } else {
-                // Interpolación normal
-                for(let i = 0; i < txtData.length - 1; i++) {
-                    if (S >= txtData[i].s && S <= txtData[i+1].s) {
-                        p1 = txtData[i];
-                        p2 = txtData[i+1];
+                for(let i = 0; i < poliLinea.length - 1; i++) {
+                    if (S >= poliLinea[i].s && S <= poliLinea[i+1].s) {
+                        p1 = poliLinea[i];
+                        p2 = poliLinea[i+1];
                         break;
                     }
                 }
             }
 
-            // Cálculo del Factor T paramétrico
-            const range = p2.s - p1.s;
-            const t = (range === 0) ? 0 : (S - p1.s) / range;
+            let range = p2.s - p1.s;
+            let t = (range === 0) ? 0 : (S - p1.s) / range;
             
             return {
                 x: p1.x + t * (p2.x - p1.x),
                 y: p1.y + t * (p2.y - p1.y),
-                z: p1.z + t * (p2.z - p1.z), // Z_superficie real interpolado
+                z: (p1.z !== undefined && p2.z !== undefined) ? p1.z + t * (p2.z - p1.z) : undefined,
                 s: S
             };
         }
+
+        // 3. Función Principal Integradora para el Láser/Sonda
+        function obtenerCoordenadasReales(S) {
+            if (!activeProfileName) return null;
+            let txtName = activeProfileName.replace('Perfil', 'PL').replace('.json', '.txt');
+            let altName = activeProfileName.replace('.json', '.txt');
+            let txtData = progresivasCargadas[txtName] || progresivasCargadas[altName];
+            
+            if (txtData) {
+                return obtenerCoordenadasDesdeS(S, txtData); 
+            } else if (dataProyeccion2D && dataProyeccion2D.spineFallback) {
+                // Si no hay TXT usamos el respaldo esquelético curvado
+                return obtenerCoordenadasDesdeS(S, dataProyeccion2D.spineFallback);
+            }
+            return null;
+        }
+
+        // 4. PLAN DE RESPALDO (Spine Fallback): Si no hay TXT, creamos un esqueleto curvo promediando el modelo 3D
+        function crearSpineFallback(data) {
+            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+            let pMinX = null, pMaxX = null, pMinY = null, pMaxY = null;
+            
+            data.forEach(capa => {
+                for (let i = 0; i < capa.vertices.length; i += 3) {
+                    let vx = capa.vertices[i], vy = capa.vertices[i+1];
+                    if (Number.isFinite(vx) && Number.isFinite(vy)) {
+                        if (vx < minX) { minX = vx; pMinX = {x:vx, y:vy}; }
+                        if (vx > maxX) { maxX = vx; pMaxX = {x:vx, y:vy}; }
+                        if (vy < minY) { minY = vy; pMinY = {x:vx, y:vy}; }
+                        if (vy > maxY) { maxY = vy; pMaxY = {x:vx, y:vy}; }
+                    }
+                }
+            });
+            
+            let pStart, pEnd;
+            if ((maxX - minX) >= (maxY - minY)) { pStart = pMinX; pEnd = pMaxX; } 
+            else { pStart = pMinY; pEnd = pMaxY; }
+            
+            let dirX = pEnd.x - pStart.x, dirY = pEnd.y - pStart.y;
+            let length = Math.hypot(dirX, dirY);
+            if (length === 0) return [];
+            
+            let uX = dirX / length, uY = dirY / length;
+            
+            let numBins = 100; // Alta resolución para detectar curvas
+            let bins = Array.from({length: numBins}, () => ({ sumX: 0, sumY: 0, count: 0 }));
+            let minProj = Infinity, maxProj = -Infinity;
+            
+            // Proyección Base
+            data.forEach(capa => {
+                for (let i = 0; i < capa.vertices.length; i += 3) {
+                    let vx = capa.vertices[i], vy = capa.vertices[i+1];
+                    if (Number.isFinite(vx)) {
+                        let proj = (vx - pStart.x) * uX + (vy - pStart.y) * uY;
+                        if (proj < minProj) minProj = proj;
+                        if (proj > maxProj) maxProj = proj;
+                    }
+                }
+            });
+            
+            let projRange = maxProj - minProj;
+            if (projRange === 0) return [];
+
+            // Llenado de contenedores (Binning)
+            data.forEach(capa => {
+                for (let i = 0; i < capa.vertices.length; i += 3) {
+                    let vx = capa.vertices[i], vy = capa.vertices[i+1];
+                    if (Number.isFinite(vx)) {
+                        let proj = (vx - pStart.x) * uX + (vy - pStart.y) * uY;
+                        let t = (proj - minProj) / projRange;
+                        let binIdx = Math.max(0, Math.min(numBins - 1, Math.floor(t * numBins)));
+                        bins[binIdx].sumX += vx;
+                        bins[binIdx].sumY += vy;
+                        bins[binIdx].count++;
+                    }
+                }
+            });
+            
+            // Construcción del esqueleto y sumatoria de arco real (S)
+            let spine = [];
+            let currentS = 0;
+            let lastPt = null;
+            
+            for (let i = 0; i < numBins; i++) {
+                if (bins[i].count > 0) {
+                    let pt = { x: bins[i].sumX / bins[i].count, y: bins[i].sumY / bins[i].count };
+                    if (lastPt) {
+                        currentS += Math.hypot(pt.x - lastPt.x, pt.y - lastPt.y);
+                    }
+                    spine.push({ x: pt.x, y: pt.y, s: currentS });
+                    lastPt = pt;
+                }
+            }
+            return spine;
+        }
+
+        // --------------------------------------------------------------------------
 
         function toggle2DPanel() {
             document.getElementById('main-wrapper').classList.toggle('is-2d-collapsed');
@@ -610,7 +732,6 @@
                 for (let file of files) {
                     const reader = new FileReader();
                     reader.onload = function(event) {
-                        // Soporte Dual: JSON (Geometría) o TXT (Progresivas Reales)
                         if (file.name.toLowerCase().endsWith('.txt')) {
                             procesarProgresivasTXT(event.target.result, file.name);
                         } else {
@@ -1069,7 +1190,7 @@
                 }
             }
             
-            actualizarEstadoVinculoTXT(); // Actualiza vínculos visuales
+            actualizarEstadoVinculoTXT(); 
         }
 
         async function activarPerfil2D(nombre, data) {
@@ -1105,17 +1226,13 @@
 
             await new Promise(r => setTimeout(r, 10));
 
-            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity, minZ = Infinity, maxZ = -Infinity;
-            let pMinX = null, pMaxX = null, pMinY = null, pMaxY = null, countVertices = 0;
+            let minZ = Infinity, maxZ = -Infinity;
+            let countVertices = 0;
 
             data.forEach(capa => {
                 for (let i = 0; i < capa.vertices.length; i += 3) {
-                    let vx = capa.vertices[i], vy = capa.vertices[i+1], vz = capa.vertices[i+2];
-                    if (Number.isFinite(vx) && Number.isFinite(vy) && Number.isFinite(vz)) {
-                        if (vx < minX) { minX = vx; pMinX = {x:vx, y:vy, z:vz}; }
-                        if (vx > maxX) { maxX = vx; pMaxX = {x:vx, y:vy, z:vz}; }
-                        if (vy < minY) { minY = vy; pMinY = {x:vx, y:vy, z:vz}; }
-                        if (vy > maxY) { maxY = vy; pMaxY = {x:vx, y:vy, z:vz}; }
+                    let vz = capa.vertices[i+2];
+                    if (Number.isFinite(vz)) {
                         if (vz < minZ) minZ = vz;
                         if (vz > maxZ) maxZ = vz;
                         countVertices++;
@@ -1125,24 +1242,25 @@
 
             if (countVertices === 0) { isProcessing2D = false; return; }
 
-            let pStart, pEnd;
-            if ((maxX - minX) >= (maxY - minY)) { pStart = pMinX; pEnd = pMaxX; } 
-            else { pStart = pMinY; pEnd = pMaxY; }
-
-            const dirX = pEnd.x - pStart.x, dirY = pEnd.y - pStart.y;
-            let longitudCuerda = Math.hypot(dirX, dirY);
-            if (longitudCuerda === 0) longitudCuerda = 0.0001; 
-
-            const uX = dirX / longitudCuerda, uY = dirY / longitudCuerda;
+            // FASE 1: DESENROLLADO CURVILÍNEO (Reemplaza la cuerda geométrica recta)
+            let txtName = nombre.replace('Perfil', 'PL').replace('.json', '.txt');
+            let altName = nombre.replace('.json', '.txt');
+            let txtData = progresivasCargadas[txtName] || progresivasCargadas[altName];
+            
+            // Asignar el PoliLínea (Datos TXT Reales o un Fallback Curvado)
+            let poliLineaActiva = txtData || crearSpineFallback(data);
+            
             let globalMinS = Infinity, globalMaxS = -Infinity;
-
             const estratosProyectados = [];
+
             data.forEach(capa => {
                 const vertices2D = [];
                 for (let i = 0; i < capa.vertices.length; i += 3) {
                     let vx = capa.vertices[i], vy = capa.vertices[i+1], vz = capa.vertices[i+2];
                     if (Number.isFinite(vx)) {
-                        let s = (vx - pStart.x) * uX + (vy - pStart.y) * uY;
+                        // Proyección matemática ortogonal curva (Elimina acortamientos)
+                        let s = proyectarXYEnPoliLinea(vx, vy, poliLineaActiva);
+                        
                         if (s < globalMinS) globalMinS = s;
                         if (s > globalMaxS) globalMaxS = s;
                         vertices2D.push({ s: s, z: vz });
@@ -1159,7 +1277,17 @@
             minZ_grid = Math.floor(minZ / 50) * 50;
             const maxZ_grid = Math.ceil(maxZ / 50) * 50;
 
-            dataProyeccion2D = { estratos: estratosProyectados, longitud: rangeS, minS: globalMinS, maxS: globalMaxS, minZ: minZ, maxZ: maxZ, minZ_grid: minZ_grid, maxZ_grid: maxZ_grid, pStart: pStart, uX: uX, uY: uY };
+            dataProyeccion2D = { 
+                estratos: estratosProyectados, 
+                longitud: rangeS, 
+                minS: globalMinS, 
+                maxS: globalMaxS, 
+                minZ: minZ, 
+                maxZ: maxZ, 
+                minZ_grid: minZ_grid, 
+                maxZ_grid: maxZ_grid,
+                spineFallback: !txtData ? poliLineaActiva : null // Guardar respaldo curvo si fue usado
+            };
             
             await generarRawMeshAsync(myRenderId);
 
@@ -1336,7 +1464,6 @@
             const logicalH = canvas2D.height / dpr;
             const isMobile = window.innerWidth <= 768;
 
-            // FASE 2 UI PREP: Diseño limpio priorizando S sobre Z
             const uiTooltipHTML = `
                 <div style="font-size:14px; font-weight:bold; color:var(--accent-color); margin-bottom: 2px;">Prog: ${cursorMundoS.toFixed(1)} m</div>
                 <div style="font-size:10px; color:#888;">Elev: ${cursorMundoZ.toFixed(1)} m</div>
@@ -1410,22 +1537,13 @@
 
             clickedPoint2D = { s: cursorMundoS, z: cursorMundoZ };
 
-            // FASE 1: Usar algoritmo matemático de interpolación 3D si hay datos .txt reales. 
-            // Si no hay (modo antiguo), hacemos fallback al eje recto simplificado.
+            // Usamos la nueva lógica integradora para ubicar el Láser 3D en base al S curvo
             let coordsReales = obtenerCoordenadasReales(cursorMundoS);
-            let xScene, yScene, zScene;
+            let xScene = 0, yScene = 0, zScene = 0;
 
             if (coordsReales) {
-                // Cálculo 3D con datos topográficos reales de las progresivas
                 xScene = coordsReales.x - centerOffset.x;
                 yScene = coordsReales.y - centerOffset.y;
-                zScene = cursorMundoZ - centerOffset.z;
-            } else {
-                // Fallback aproximado anterior
-                const xOrig = dataProyeccion2D.pStart.x + dataProyeccion2D.uX * cursorMundoS;
-                const yOrig = dataProyeccion2D.pStart.y + dataProyeccion2D.uY * cursorMundoS;
-                xScene = xOrig - centerOffset.x;
-                yScene = yOrig - centerOffset.y;
                 zScene = cursorMundoZ - centerOffset.z;
             }
 
@@ -1477,13 +1595,11 @@
             div.id = `capa-${safeId}`; 
             div.className = 'layer-item';
             
-            // Si es un perfil, preparamos la sección extra para el status de vinculación (Fase 1)
             let extraHTML = "";
             if (tipo === 'perfil') {
-                extraHTML = `<div id="status-txt-${safeId}" style="font-size: 10.5px; color: #ffb74d; margin-top: 4px; padding-left: 42px; font-style: italic; letter-spacing: 0.5px;">⚠️ Sin datos topográficos (Interpolación básica)</div>`;
+                extraHTML = `<div id="status-txt-${safeId}" style="font-size: 10.5px; color: #ffb74d; margin-top: 4px; padding-left: 42px; font-style: italic; letter-spacing: 0.5px;">⚠️ Sin TXT. Modo Respaldo: Curva Aproximada.</div>`;
             }
 
-            // Render condicional de Interfaz dependiendo del tipo de Archivo
             if (tipo === 'progresiva') {
                 div.innerHTML = `
                     <div style="display:flex; align-items:center; gap:10px; width:100%; overflow:hidden;">
@@ -1526,7 +1642,6 @@
                 }
             }
 
-            // Lógica de botón eliminar
             div.querySelector('.btn-del').addEventListener('click', () => {
                 if (tipo === 'terreno' && terrenoMesh) { 
                     scene.remove(terrenoMesh); liberarMemoriaMesh(terrenoMesh); terrenoMesh = null; terrenoCrudoData = null; nombreArchivoTerreno = null; 
@@ -1547,7 +1662,7 @@
                 div.remove();
                 if (container.children.length === 0) container.innerHTML = `<div id="empty-list-msg" style="font-size: 12px; color: #555; text-align: center; padding: 15px; border: 1px dashed #333; border-radius: 6px;">Ningún archivo cargado</div>`;
                 
-                actualizarEstadoVinculoTXT(); // Si eliminamos algo, re-evaluamos todos los perfiles
+                actualizarEstadoVinculoTXT(); 
             });
             container.appendChild(div);
         }
