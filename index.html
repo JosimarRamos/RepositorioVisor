@@ -25,8 +25,32 @@
         #sidebar-content { padding: 20px; overflow-y: auto; flex-grow: 1; width: var(--sidebar-width); box-sizing: border-box; transition: opacity 0.2s ease; }
         #sidebar.collapsed #sidebar-content { opacity: 0; pointer-events: none; }
 
-        #toggle-sidebar { position: absolute; top: 50%; right: -24px; transform: translateY(-50%); width: 24px; height: 60px; background: var(--sidebar-bg); border: 1px solid var(--border-color); border-left: none; border-radius: 0 8px 8px 0; color: var(--text-color); cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 21; box-shadow: 4px 0 10px rgba(0,0,0,0.3); }
-        #toggle-sidebar:hover { color: var(--accent-color); }
+        /* Botón hamburguesa flotante en la escena 3D */
+        #btn-hamburger {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            z-index: 100; /* Por encima de la escena 3D */
+            background: rgba(30, 30, 30, 0.9);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            border-radius: 6px;
+            width: 38px;
+            height: 38px;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            backdrop-filter: blur(4px);
+            transition: background 0.2s, color 0.2s, border-color 0.2s;
+        }
+        #btn-hamburger:hover {
+            background: var(--accent-color);
+            color: #000;
+            border-color: var(--accent-color);
+        }
 
         #views-container { display: flex; flex-grow: 1; width: 0; flex-direction: row; }
         .viewport { position: relative; flex: 1; height: 100%; box-sizing: border-box; min-height: 0; min-width: 0; }
@@ -175,19 +199,21 @@
 
     <div id="main-wrapper">
         <div id="sidebar" class="collapsed">
-            <div id="toggle-sidebar" title="Ocultar/Mostrar panel">▶</div>
-            
-            <!-- PANEL LATERAL MODERNIZADO (FASE 1) -->
+            <!-- PANEL LATERAL MODERNIZADO -->
             <div id="sidebar-content">
-                <h1 style="border:none; margin-bottom: 15px; font-size:16px; color: var(--accent-color); text-transform: uppercase; letter-spacing: 1px;">Visor Geofísico</h1>
+                <h1 style="border:none; margin-bottom: 15px; font-size:16px; color: var(--accent-color); text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; gap: 10px;">
+                    <!-- Hamburguesa funcional para cerrar menú, excelente en móviles -->
+                    <span id="btn-sidebar-close" style="cursor: pointer; color: var(--text-color);" title="Cerrar panel">☰</span>
+                    Visor Geofísico
+                </h1>
                 
-                <!-- ACORDEÓN 1 -->
+                <!-- ACORDEÓN 1 (Compactado por defecto) -->
                 <div class="accordion-item">
-                    <div class="accordion-header active" onclick="toggleAccordion(this)">
+                    <div class="accordion-header" onclick="toggleAccordion(this)">
                         <div class="accordion-title"><span class="accordion-icon">🗄️</span> 1. IMPORTAR DATOS (JSON)</div>
-                        <span class="chevron">▲</span>
+                        <span class="chevron">▼</span>
                     </div>
-                    <div class="accordion-content" style="display: block;">
+                    <div class="accordion-content">
                         <div class="file-drop-zone" onclick="document.getElementById('file-loader').click()">
                             <span id="drop-text">Cargar archivos de Terreno o Perfil</span>
                             <input type="file" id="file-loader" class="file-input" accept=".json" multiple>
@@ -195,13 +221,13 @@
                     </div>
                 </div>
 
-                <!-- ACORDEÓN 2 -->
+                <!-- ACORDEÓN 2 (Compactado por defecto) -->
                 <div class="accordion-item">
-                    <div class="accordion-header active" onclick="toggleAccordion(this)">
+                    <div class="accordion-header" onclick="toggleAccordion(this)">
                         <div class="accordion-title"><span class="accordion-icon">⚙️</span> 2. AJUSTES DE PANTALLA & TERRENO</div>
-                        <span class="chevron">▲</span>
+                        <span class="chevron">▼</span>
                     </div>
-                    <div class="accordion-content" style="display: block;">
+                    <div class="accordion-content">
                         <div class="setting-row">
                             <span class="setting-label">Mostrar Terreno</span>
                             <label class="switch">
@@ -235,7 +261,7 @@
                     </div>
                 </div>
 
-                <!-- ACORDEÓN 3 -->
+                <!-- ACORDEÓN 3 (Abierto por defecto) -->
                 <div class="accordion-item" style="flex-grow: 1; display: flex; flex-direction: column;">
                     <div class="accordion-header active" onclick="toggleAccordion(this)">
                         <div class="accordion-title"><span class="accordion-icon">🗺️</span> 3. CAPAS Y PERFILES ACTIVOS</div>
@@ -252,6 +278,8 @@
 
         <div id="views-container">
             <div id="view-3d" class="viewport">
+                <!-- Botón hamburguesa flotante estándar de visualizadores de mapas -->
+                <button id="btn-hamburger" title="Ocultar/Mostrar panel lateral">☰</button>
                 <div id="canvas-3d"></div>
             </div>
 
@@ -298,7 +326,7 @@
         import * as THREE from 'three';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-        // Lógica Global UI (Fase 1)
+        // Lógica Global de Acordeones
         window.toggleAccordion = function(header) {
             header.classList.toggle('active');
             const content = header.nextElementSibling;
@@ -458,12 +486,14 @@
                 if (el) el.addEventListener(event, callback);
             }
 
-            bindEvent('toggle-sidebar', 'click', () => {
+            // Nueva lógica unificada de colapso/despliegue del panel con el ícono de hamburguesa
+            const toggleSidebarFn = () => {
                 const sidebar = document.getElementById('sidebar');
                 sidebar.classList.toggle('collapsed');
-                document.getElementById('toggle-sidebar').innerText = sidebar.classList.contains('collapsed') ? '▶' : '◀';
                 setTimeout(onWindowResize, 310);
-            });
+            };
+            bindEvent('btn-hamburger', 'click', toggleSidebarFn);
+            bindEvent('btn-sidebar-close', 'click', toggleSidebarFn);
 
             bindEvent('btn-toggle-2d', 'click', toggle2DPanel);
             bindEvent('toggle-2d-sidebar', 'click', toggle2DPanel);
@@ -472,7 +502,6 @@
 
             bindEvent('chk-terreno', 'change', (e) => { if (terrenoMesh) terrenoMesh.visible = e.target.checked; });
             
-            // Evento actualizado para el color y el HEX
             bindEvent('color-terreno', 'input', (e) => { 
                 document.getElementById('hex-terreno').innerText = e.target.value.toUpperCase();
                 if (terrenoMesh) { 
@@ -1108,7 +1137,7 @@
 
                         let x0 = (v0.s - dataProyeccion2D.minS) * escalaRaw;
                         let y0 = rawMeshCanvas.height - (v0.z - dataProyeccion2D.minZ_grid) * escalaRaw;
-                        let x1 = (v1.s - dataProyeccion2D.minS) * escalaRaw;
+                        let x1 = (v0.s - dataProyeccion2D.minS) * escalaRaw;
                         let y1 = rawMeshCanvas.height - (v1.z - dataProyeccion2D.minZ_grid) * escalaRaw;
                         let x2 = (v2.s - dataProyeccion2D.minS) * escalaRaw;
                         let y2 = rawMeshCanvas.height - (v2.z - dataProyeccion2D.minZ_grid) * escalaRaw;
@@ -1346,7 +1375,6 @@
             updateCursor2D();
         }
 
-        // Lógica de Capas (Fase 1)
         function actualizarUILista(nombre, tipo, rawData = null) {
             const container = document.getElementById('lista-capas');
             const emptyMsg = document.getElementById('empty-list-msg');
