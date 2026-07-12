@@ -25,7 +25,6 @@
         #sidebar-content { padding: 20px; padding-top: 60px; overflow-y: auto; flex-grow: 1; width: var(--sidebar-width); box-sizing: border-box; transition: opacity 0.2s ease; }
         #sidebar.collapsed #sidebar-content { opacity: 0; pointer-events: none; }
 
-        /* Botón Sándwich (Hamburger Menu) */
         #toggle-sidebar { position: absolute; top: 15px; right: -42px; width: 42px; height: 42px; background: var(--sidebar-bg); border: 1px solid var(--border-color); border-left: none; border-radius: 0 8px 8px 0; color: var(--text-color); cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 21; box-shadow: 4px 0 10px rgba(0,0,0,0.3); font-size: 20px; transition: color 0.2s, background 0.2s; }
         #toggle-sidebar:hover { color: var(--accent-color); }
 
@@ -39,7 +38,6 @@
         #canvas-2d { flex-grow: 1; width: 100%; height: 100%; display: block; background-color: #0a0a0a; cursor: grab; outline: none; }
         #canvas-2d:active { cursor: grabbing; }
         
-        /* ACORDEONES */
         .accordion-item { margin-bottom: 12px; }
         .accordion-header { background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-size: 13px; font-weight: 600; transition: background 0.2s, border-radius 0.2s; user-select: none; }
         .accordion-header:hover { background: #333333; }
@@ -50,7 +48,6 @@
         .accordion-header.active .chevron { transform: rotate(180deg); }
         .accordion-content { background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-color); border-top: none; border-radius: 0 0 8px 8px; padding: 15px; display: none; }
 
-        /* SWITCHES & CONTROLES */
         .setting-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
         .setting-label { font-size: 13px; color: #ccc; }
         
@@ -87,6 +84,12 @@
         
         #view-2d-header { background-color: #1a1a1a; border-bottom: 1px solid var(--border-color); padding: 12px 20px; font-size: 13px; font-weight: bold; color: #ccc; display: flex; justify-content: space-between; align-items: center; white-space: nowrap; }
         
+        /* FASE 2: Buscador CSS */
+        #search-progressive { background: #111; border: 1px solid var(--border-color); color: var(--accent-color); border-radius: 4px; padding: 4px 8px; font-size: 12px; width: 85px; outline: none; transition: border-color 0.2s, background 0.2s; font-family: monospace; }
+        #search-progressive:focus { border-color: var(--accent-color); background: #222; }
+        #search-progressive::placeholder { color: #555; font-family: 'Segoe UI', sans-serif; }
+        .header-title-text { font-size: 13px; font-weight: bold; }
+
         #btn-toggle-2d { background: none; border: none; color: var(--accent-color); cursor: pointer; font-size: 14px; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 4px; transition: transform 0.3s ease, background 0.2s; }
         #btn-toggle-2d:hover { background: rgba(41, 182, 246, 0.2); }
 
@@ -137,8 +140,12 @@
             #active-profile-title { max-width: 100px; overflow: hidden; text-overflow: ellipsis; }
             
             #dpad-container { display: none !important; }
-            
             #laser-info { bottom: 85px; right: 15px; padding: 10px 12px; font-size: 11px; max-width: 180px; box-shadow: 0 4px 15px rgba(0,0,0,0.6); border-radius: 6px; }
+
+            /* Ajustes Móvil Buscador */
+            .header-title-text { display: none; }
+            #search-progressive { width: 70px; font-size: 11px; }
+            .header-nav-container { padding-left: 5px !important; border-left: none !important; }
         }
     </style>
     <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
@@ -155,7 +162,6 @@
 
     <div id="main-wrapper">
         <div id="sidebar" class="collapsed">
-            <!-- BOTÓN SÁNDWICH MODERNIZADO -->
             <div id="toggle-sidebar" title="Ocultar/Mostrar panel">☰</div>
             
             <div id="sidebar-content">
@@ -167,7 +173,6 @@
                         <span class="chevron">▲</span>
                     </div>
                     <div class="accordion-content" style="display: block;">
-                        <!-- Se añadió soporte manual para txt -->
                         <div class="file-drop-zone" onclick="document.getElementById('file-loader').click()">
                             <span id="drop-text">Cargar JSON (Terreno/Perfil) o TXT (Progresivas)</span>
                             <input type="file" id="file-loader" class="file-input" accept=".json, .txt" multiple>
@@ -239,13 +244,18 @@
                 <div id="view-2d-header">
                     <div style="display:flex; align-items:center; gap:8px;">
                         <button id="btn-toggle-2d" title="Ocultar/Mostrar panel 2D">▼</button>
-                        <span>SECCIÓN GEOFÍSICA (2D)</span>
+                        <span class="header-title-text">SECCIÓN GEOFÍSICA (2D)</span>
                     </div>
 
-                    <div style="display:flex; align-items:center; gap:6px;">
-                        <button id="btn-prev-profile" class="btn-profile-nav" title="Perfil Anterior">◀</button>
-                        <span id="active-profile-title" style="color: var(--accent-color); font-size:12px; font-weight:bold;">[Ninguno]</span>
-                        <button id="btn-next-profile" class="btn-profile-nav" title="Perfil Siguiente">▶</button>
+                    <!-- FASE 2: Nuevo buscador e integración con botonera -->
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <input type="number" id="search-progressive" placeholder="🔍 Prog. (m)" title="Buscar y anclar progresiva (Enter para centrar)">
+                        
+                        <div class="header-nav-container" style="display:flex; align-items:center; gap:6px; border-left: 1px solid #444; padding-left: 10px;">
+                            <button id="btn-prev-profile" class="btn-profile-nav" title="Perfil Anterior">◀</button>
+                            <span id="active-profile-title" style="color: var(--accent-color); font-size:12px; font-weight:bold;">[Ninguno]</span>
+                            <button id="btn-next-profile" class="btn-profile-nav" title="Perfil Siguiente">▶</button>
+                        </div>
                     </div>
                 </div>
                 
@@ -276,7 +286,6 @@
         import * as THREE from 'three';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-        // Lógica Global UI
         window.toggleAccordion = function(header) {
             header.classList.toggle('active');
             const content = header.nextElementSibling;
@@ -298,7 +307,6 @@
         const perfilesCargados = {}; 
         const perfilesRawData = {}; 
         
-        // FASE 1: Estructura de almacenamiento de datos TXT topográficos
         const progresivasCargadas = {}; 
 
         let centerOffset = null; 
@@ -314,6 +322,9 @@
         let cursorX = -1000, cursorY = -1000;
         let cursorMundoS = 0, cursorMundoZ = 0;
         let isCursorActive = false;
+        
+        // FASE 2: Variable global de Anclaje de Buscador
+        let snapS = null; 
 
         let zoom2D = 1.0;
         let panX = 0;
@@ -362,7 +373,6 @@
             gridHelper.rotation.x = Math.PI / 2;
             scene.add(gridHelper);
 
-            // Sonda Lumínica Básica (Será mejorada en Fase 3)
             const sg = new THREE.SphereGeometry(1, 16, 16);
             const sm = new THREE.MeshBasicMaterial({color: 0xff1744, depthTest: false});
             laserMesh = new THREE.Mesh(sg, sm);
@@ -406,7 +416,6 @@
                             nombrePrimerPerfil = nombre;
                         }
 
-                        // FASE 1: Asociación automática Perfil -> Archivo TXT
                         const nombreTXT = nombre.replace('Perfil', 'PL').replace('.json', '.txt');
                         const resTXT = await fetch(nombreTXT);
                         if (resTXT.ok) {
@@ -414,7 +423,6 @@
                             procesarProgresivasTXT(txtData, nombreTXT);
                         }
                         
-                        // Permite que la UI respire (y dibuje el 3D) mientras carga los demás
                         await new Promise(r => setTimeout(r, 10));
                     }
                 } catch (e) {
@@ -427,7 +435,6 @@
             }
         }
 
-        // FASE 1: Parser de Progresivas Reales (PLX.txt)
         function procesarProgresivasTXT(text, filename) {
             const lines = text.trim().split('\n');
             const data = [];
@@ -446,16 +453,15 @@
                 }
             }
             if(data.length > 0) {
-                data.sort((a,b) => a.s - b.s); // Asegurar orden ascendente de progresiva
+                data.sort((a,b) => a.s - b.s); 
                 progresivasCargadas[filename] = data;
                 actualizarUILista(filename, 'progresiva');
-                actualizarEstadoVinculoTXT(); // UI: Validar conexiones
+                actualizarEstadoVinculoTXT(); 
             } else {
                 console.warn("No se encontraron datos válidos en el archivo TXT: " + filename);
             }
         }
 
-        // FASE 1: UI - Verificador visual de vinculación
         function actualizarEstadoVinculoTXT() {
             for (const perfilName in perfilesRawData) {
                 const safeId = perfilName.replace(/[^a-zA-Z0-9]/g, '_');
@@ -478,11 +484,6 @@
             }
         }
 
-        // --------------------------------------------------------------------------
-        // FASE 1 - CORE: DESENROLLADO CURVILÍNEO (TRUE PROGRESSIVE MAPPING)
-        // --------------------------------------------------------------------------
-
-        // Optimización matemática masiva: Calcula un Vértice usando Tramos Pre-calculados
         function proyectarXYEnSegmentosPrecalculados(x, y, segmentos) {
             if (!segmentos || segmentos.length === 0) return 0;
             let minDistSq = Infinity;
@@ -491,10 +492,8 @@
             for (let i = 0; i < segmentos.length; i++) {
                 let seg = segmentos[i];
                 let t = 0;
-                // Proyección Ortogonal al Vector
                 if (seg.l2 > 0) t = ((x - seg.p1.x) * seg.dx + (y - seg.p1.y) * seg.dy) / seg.l2;
                 
-                // Clamping rápido (0 a 1) para ubicar el punto más cercano dentro del segmento
                 let tc = t < 0 ? 0 : (t > 1 ? 1 : t);
                 
                 let px = seg.p1.x + tc * seg.dx;
@@ -504,7 +503,6 @@
                 if (distSq < minDistSq) {
                     minDistSq = distSq;
                     let trueT = tc;
-                    // Permitir extrapolación muy fina si el punto queda antes del inicio o después del final del TXT completo
                     if (i === 0 && t < 0) trueT = t;
                     if (i === segmentos.length - 1 && t > 1) trueT = t;
                     bestS = seg.p1.s + trueT * (seg.p2.s - seg.p1.s);
@@ -513,7 +511,6 @@
             return bestS;
         }
 
-        // Proceso Inverso: Transformar un "S" interactuado en 2D a un (X, Y, Z) en el espacio 3D real
         function obtenerCoordenadasDesdeS(S, poliLinea) {
             if (!poliLinea || poliLinea.length === 0) return null;
             if (poliLinea.length === 1) return { x: poliLinea[0].x, y: poliLinea[0].y, z: poliLinea[0].z, s: S };
@@ -546,7 +543,6 @@
             };
         }
 
-        // Función Principal Integradora para el Láser/Sonda
         function obtenerCoordenadasReales(S) {
             if (!activeProfileName) return null;
             let txtName = activeProfileName.replace('Perfil', 'PL').replace('.json', '.txt');
@@ -561,7 +557,6 @@
             return null;
         }
 
-        // PLAN DE RESPALDO (Spine Fallback): Si no hay TXT, creamos un esqueleto curvo automático
         function crearSpineFallback(data) {
             let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
             let pMinX = null, pMaxX = null, pMinY = null, pMaxY = null;
@@ -588,11 +583,10 @@
             
             let uX = dirX / length, uY = dirY / length;
             
-            let numBins = 100; // Alta resolución para detectar curvas
+            let numBins = 100; 
             let bins = Array.from({length: numBins}, () => ({ sumX: 0, sumY: 0, count: 0 }));
             let minProj = Infinity, maxProj = -Infinity;
             
-            // Proyección Base
             data.forEach(capa => {
                 for (let i = 0; i < capa.vertices.length; i += 3) {
                     let vx = capa.vertices[i], vy = capa.vertices[i+1];
@@ -607,7 +601,6 @@
             let projRange = maxProj - minProj;
             if (projRange === 0) return [];
 
-            // Llenado de contenedores (Binning)
             data.forEach(capa => {
                 for (let i = 0; i < capa.vertices.length; i += 3) {
                     let vx = capa.vertices[i], vy = capa.vertices[i+1];
@@ -622,7 +615,6 @@
                 }
             });
             
-            // Construcción del esqueleto y sumatoria de arco real (S)
             let spine = [];
             let currentS = 0;
             let lastPt = null;
@@ -639,8 +631,6 @@
             }
             return spine;
         }
-
-        // --------------------------------------------------------------------------
 
         function toggle2DPanel() {
             document.getElementById('main-wrapper').classList.toggle('is-2d-collapsed');
@@ -668,7 +658,6 @@
                 if (el) el.addEventListener(event, callback);
             }
 
-            // BOTÓN SÁNDWICH LÓGICA
             bindEvent('toggle-sidebar', 'click', () => {
                 const sidebar = document.getElementById('sidebar');
                 sidebar.classList.toggle('collapsed');
@@ -681,6 +670,48 @@
             bindEvent('toggle-2d-sidebar', 'click', toggle2DPanel);
             bindEvent('btn-prev-profile', 'click', () => cambiarPerfilSiguiente(-1));
             bindEvent('btn-next-profile', 'click', () => cambiarPerfilSiguiente(1));
+
+            // FASE 2: Eventos del Buscador de Progresivas
+            const searchInput = document.getElementById('search-progressive');
+            searchInput.addEventListener('input', (e) => {
+                if (!dataProyeccion2D) return;
+                const val = parseFloat(e.target.value);
+                if (!isNaN(val) && val >= dataProyeccion2D.minS && val <= dataProyeccion2D.maxS) {
+                    snapS = val;
+                    isCursorActive = true;
+                    searchInput.style.color = "var(--accent-color)";
+                    updateCursor2D();
+                } else {
+                    snapS = null;
+                    searchInput.style.color = "var(--danger-color)";
+                    if (e.target.value === '') searchInput.style.color = "var(--accent-color)";
+                    dibu2D();
+                }
+            });
+
+            searchInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    searchInput.value = '';
+                    snapS = null;
+                    searchInput.blur();
+                    searchInput.style.color = "var(--accent-color)";
+                    dibu2D();
+                } else if (e.key === 'Enter' && snapS !== null && dataProyeccion2D) {
+                    // Auto-Centrado Inteligente
+                    const logicalW = canvas2D.width / dpr;
+                    const logicalH = canvas2D.height / dpr;
+                    const isMobile = window.innerWidth <= 768;
+                    const paddingLeft = 60;
+                    const paddingRight = 60;
+                    const w_canvas = logicalW - (paddingLeft + paddingRight);
+                    
+                    panX = (logicalW / 2) - paddingLeft - (w_canvas - dataProyeccion2D.longitud * escalaGlobal) / 2 - (snapS - dataProyeccion2D.minS) * escalaGlobal;
+                    reconstruirCacheScreen();
+                    
+                    cursorY = logicalH / 2; // Posiciona el cursor a la mitad vertical
+                    triggerCursorClick(); // Dispara el puntero 3D automáticamente
+                }
+            });
 
             bindEvent('chk-terreno', 'change', (e) => { if (terrenoMesh) terrenoMesh.visible = e.target.checked; });
             
@@ -1200,6 +1231,14 @@
 
             activeProfileName = nombre;
             
+            // Reiniciar anclaje y limpiador
+            snapS = null;
+            const searchInput = document.getElementById('search-progressive');
+            if (searchInput) {
+                searchInput.value = '';
+                searchInput.style.color = "var(--accent-color)";
+            }
+            
             zoom2D = 1.0;
             panX = 0;
             panY = 0;
@@ -1219,7 +1258,6 @@
             document.getElementById('dpad-container').style.display = 'none';
             isCursorActive = false;
 
-            // FASE 1: Permitimos que el DOM dibuje el cambio de estado (Loading) antes del proceso pesado
             await new Promise(r => setTimeout(r, 20));
 
             let minZ = Infinity, maxZ = -Infinity;
@@ -1238,14 +1276,12 @@
 
             if (countVertices === 0) { isProcessing2D = false; return; }
 
-            // FASE 1: DESENROLLADO CURVILÍNEO (True Progressive Mapping)
             let txtName = nombre.replace('Perfil', 'PL').replace('.json', '.txt');
             let altName = nombre.replace('.json', '.txt');
             let txtData = progresivasCargadas[txtName] || progresivasCargadas[altName];
             
             let poliLineaActiva = txtData || crearSpineFallback(data);
             
-            // OPTIMIZACIÓN MATEMÁTICA: Pre-calcular geometría de segmentos para evitar re-cálculos masivos
             const optSegments = [];
             if (poliLineaActiva && poliLineaActiva.length > 1) {
                 for (let i = 0; i < poliLineaActiva.length - 1; i++) {
@@ -1268,10 +1304,9 @@
                 const vertices2D = [];
                 
                 for (let i = 0; i < capa.vertices.length; i += 3) {
-                    // ANTI-FREEZE: Liberamos el hilo principal cada 15,000 vértices para evitar que el navegador se trabe
                     if (verticesProcesados > 0 && verticesProcesados % 15000 === 0) {
                         await new Promise(r => setTimeout(r, 0));
-                        if (myRenderId !== currentRenderId) return; // Si el usuario cambió de perfil, abortamos cálculo
+                        if (myRenderId !== currentRenderId) return; 
                     }
                     verticesProcesados++;
 
@@ -1289,8 +1324,6 @@
                 estratosProyectados.push({ color: capa.color, caras: capa.caras, vertices: vertices2D });
             }
 
-            // FASE 1 - EXTENSIÓN FORZADA DE LA GRILLA:
-            // Sobreescribimos los límites matemáticos del 3D con los reales del archivo TXT
             if (txtData && txtData.length > 0) {
                 globalMinS = txtData[0].s;
                 globalMaxS = txtData[txtData.length - 1].s;
@@ -1311,7 +1344,7 @@
                 maxZ: maxZ, 
                 minZ_grid: minZ_grid, 
                 maxZ_grid: maxZ_grid,
-                spineFallback: !txtData ? poliLineaActiva : null // Guardar respaldo curvo si fue usado
+                spineFallback: !txtData ? poliLineaActiva : null 
             };
             
             await generarRawMeshAsync(myRenderId);
@@ -1476,7 +1509,14 @@
         function updateCursor2D() {
             if (!dataProyeccion2D || isProcessing2D || !isCursorActive) return;
 
-            cursorMundoS = dataProyeccion2D.minS + (cursorX - transX) / escalaGlobal;
+            // FASE 2: Forzado de Posición Cursor en Modo Anclaje (Snap)
+            if (snapS !== null) {
+                cursorX = transX + (snapS - dataProyeccion2D.minS) * escalaGlobal;
+                cursorMundoS = snapS;
+            } else {
+                cursorMundoS = dataProyeccion2D.minS + (cursorX - transX) / escalaGlobal;
+            }
+            
             cursorMundoZ = dataProyeccion2D.minZ_grid + (transY - cursorY) / escalaGlobal;
 
             dibu2D();
@@ -1498,11 +1538,23 @@
                 ctx2D.save();
                 ctx2D.scale(dpr, dpr);
 
-                ctx2D.strokeStyle = "rgba(41, 182, 246, 0.4)"; ctx2D.lineWidth = 1; ctx2D.setLineDash([4, 4]); 
-                ctx2D.beginPath();
-                ctx2D.moveTo(0, cursorY); ctx2D.lineTo(logicalW, cursorY);
-                ctx2D.moveTo(cursorX, 0); ctx2D.lineTo(cursorX, logicalH); 
-                ctx2D.stroke(); ctx2D.restore();
+                // FASE 2: Línea de anclaje (Snap) en versión móvil
+                if (snapS !== null) {
+                    ctx2D.strokeStyle = "var(--accent-color)"; ctx2D.lineWidth = 1.5; ctx2D.setLineDash([]);
+                    ctx2D.beginPath(); ctx2D.moveTo(cursorX, 0); ctx2D.lineTo(cursorX, logicalH); ctx2D.stroke();
+                    
+                    ctx2D.strokeStyle = "rgba(41, 182, 246, 0.4)"; ctx2D.lineWidth = 1; ctx2D.setLineDash([4, 4]); 
+                    ctx2D.beginPath(); ctx2D.moveTo(0, cursorY); ctx2D.lineTo(logicalW, cursorY); ctx2D.stroke();
+                } else {
+                    ctx2D.strokeStyle = "rgba(41, 182, 246, 0.4)"; ctx2D.lineWidth = 1; ctx2D.setLineDash([4, 4]); 
+                    ctx2D.beginPath();
+                    ctx2D.moveTo(0, cursorY); ctx2D.lineTo(logicalW, cursorY);
+                    ctx2D.moveTo(cursorX, 0); ctx2D.lineTo(cursorX, logicalH); 
+                    ctx2D.stroke(); 
+                }
+                
+                ctx2D.setLineDash([]); 
+                ctx2D.restore();
 
                 tooltip2D.style.display = 'block';
                 tooltip2D.style.left = `${cursorX + canvas2D.getBoundingClientRect().left + 15}px`; 
@@ -1514,11 +1566,21 @@
             ctx2D.save();
             ctx2D.scale(dpr, dpr);
 
-            ctx2D.strokeStyle = "rgba(41, 182, 246, 0.6)"; ctx2D.lineWidth = 1; ctx2D.setLineDash([4, 4]); 
-            ctx2D.beginPath();
-            ctx2D.moveTo(0, cursorY); ctx2D.lineTo(logicalW, cursorY);
-            ctx2D.moveTo(cursorX, 0); ctx2D.lineTo(cursorX, logicalH); 
-            ctx2D.stroke(); ctx2D.setLineDash([]); 
+            // FASE 2: Línea de anclaje (Snap) en versión de escritorio
+            if (snapS !== null) {
+                ctx2D.strokeStyle = "var(--accent-color)"; ctx2D.lineWidth = 2; ctx2D.setLineDash([]);
+                ctx2D.beginPath(); ctx2D.moveTo(cursorX, 0); ctx2D.lineTo(cursorX, logicalH); ctx2D.stroke();
+                
+                ctx2D.strokeStyle = "rgba(41, 182, 246, 0.6)"; ctx2D.lineWidth = 1; ctx2D.setLineDash([4, 4]); 
+                ctx2D.beginPath(); ctx2D.moveTo(0, cursorY); ctx2D.lineTo(logicalW, cursorY); ctx2D.stroke();
+            } else {
+                ctx2D.strokeStyle = "rgba(41, 182, 246, 0.6)"; ctx2D.lineWidth = 1; ctx2D.setLineDash([4, 4]); 
+                ctx2D.beginPath();
+                ctx2D.moveTo(0, cursorY); ctx2D.lineTo(logicalW, cursorY);
+                ctx2D.moveTo(cursorX, 0); ctx2D.lineTo(cursorX, logicalH); 
+                ctx2D.stroke(); 
+            }
+            ctx2D.setLineDash([]); 
 
             const lupaRadius = 70; 
             const zoomLevel = 3;   
