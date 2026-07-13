@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <!-- 1. BLOQUEO NATIVO DE ZOOM Y ESCALA EN VIEWPORT -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Visor Geofísico Bidimensional / Tridimensional</title>
@@ -37,7 +36,6 @@
         
         #canvas-3d { width: 100%; height: 100%; }
         
-        /* 1. BLOQUEO DE GESTOS EN CANVAS 2D */
         #canvas-2d { flex-grow: 1; width: 100%; height: 100%; display: block; background-color: #0a0a0a; cursor: grab; outline: none; touch-action: none; overscroll-behavior: none; }
         #canvas-2d:active { cursor: grabbing; }
         
@@ -87,7 +85,6 @@
         
         #view-2d-header { background-color: #1a1a1a; border-bottom: 1px solid var(--border-color); padding: 10px 20px; font-size: 13px; font-weight: bold; color: #ccc; display: flex; justify-content: space-between; align-items: center; white-space: nowrap; }
         
-        /* BUSCADOR SIMPLIFICADO */
         .search-prog-container { display: flex; align-items: center; background: #111; border: 1px solid var(--border-color); border-radius: 6px; overflow: hidden; margin-left: 10px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.5); }
         #search-progressive { background: transparent; border: none; color: var(--accent-color); padding: 6px 12px; font-size: 13px; width: 80px; text-align: center; outline: none; font-family: monospace; font-weight: bold; -moz-appearance: textfield; transition: color 0.3s; }
         #search-progressive::-webkit-outer-spin-button, #search-progressive::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
@@ -104,17 +101,12 @@
         .btn-profile-nav { background: rgba(255, 255, 255, 0.08); border: 1px solid #444; color: var(--text-color); border-radius: 4px; width: 26px; height: 26px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 11px; transition: background 0.2s, color 0.2s; user-select: none; }
         .btn-profile-nav:hover { background: var(--accent-color); color: #000; border-color: var(--accent-color); }
 
-        /* NUEVO DISEÑO HUD CENTRAL (Reemplaza a tooltip y láser-info lateral) */
         #laser-info { position: absolute; bottom: 25px; left: 50%; transform: translateX(-50%); background: rgba(15, 15, 15, 0.90); border: 1px solid #444; padding: 10px 25px; border-radius: 50px; display: none; align-items: center; gap: 25px; z-index: 100; box-shadow: 0 4px 20px rgba(0,0,0,0.6); pointer-events: none; backdrop-filter: blur(5px); }
         .hud-stat { display: flex; flex-direction: column; align-items: center; }
         .hud-label { font-size: 9px; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; }
         .hud-value { font-size: 14px; font-weight: bold; color: #fff; font-family: monospace; }
         .hud-value.highlight { color: #81c784; font-size: 16px; text-shadow: 0 0 5px rgba(129, 199, 132, 0.3); }
         .hud-divider { width: 1px; height: 25px; background: #333; }
-
-        #zoom-controls-2d { position: absolute; top: 60px; right: 20px; display: flex; flex-direction: column; gap: 8px; z-index: 101; }
-        .zoom-btn { width: 36px; height: 36px; border-radius: 6px; background: rgba(20, 20, 20, 0.85); color: var(--text-color); border: 1px solid var(--border-color); font-size: 16px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s, color 0.2s; backdrop-filter: blur(4px); user-select: none; }
-        .zoom-btn:hover { background: var(--accent-color); color: #000; border-color: var(--accent-color); }
 
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
@@ -144,7 +136,6 @@
             
             #active-profile-title { max-width: 80px; overflow: hidden; text-overflow: ellipsis; }
             
-            /* Ajuste HUD móvil */
             #laser-info { gap: 15px; padding: 8px 20px; border-radius: 30px; bottom: 15px; }
             .hud-label { font-size: 8px; }
             .hud-value { font-size: 12px; }
@@ -252,6 +243,8 @@
                         <div class="search-prog-container">
                             <input type="number" id="search-progressive" placeholder="Progresiva" title="Ingresar Progresiva y presionar Enter">
                         </div>
+                        <!-- NUEVO BOTÓN DE RESTAURAR MOVIDO AQUÍ -->
+                        <button id="btn-refresh-2d" class="btn-profile-nav" title="Restaurar vista" style="margin-left: 6px; font-size: 13px;">🔄</button>
                     </div>
 
                     <div style="display:flex; align-items:center; gap:6px;">
@@ -261,15 +254,8 @@
                     </div>
                 </div>
                 
-                <div id="zoom-controls-2d">
-                    <button class="zoom-btn" id="btn-zoom-in" title="Acercar">+</button>
-                    <button class="zoom-btn" id="btn-zoom-out" title="Alejar">-</button>
-                    <button class="zoom-btn" id="btn-zoom-reset" title="Restaurar escala">R</button>
-                </div>
-
                 <canvas id="canvas-2d" tabindex="0"></canvas>
                 
-                <!-- HUD CENTRAL NUEVO -->
                 <div id="laser-info">
                     <div class="hud-stat">
                         <span class="hud-label">Sondeo (S)</span>
@@ -341,6 +327,8 @@
         
         let transX = 0, transY = 0, escalaGlobal = 1, minZ_grid = 0;
         const dpr = Math.min(window.devicePixelRatio || 1, 2); 
+        
+        let raycastTimeout = null; // Variable para el Debounce de rendimiento
 
         function init() {
             const container = document.getElementById('canvas-3d');
@@ -653,7 +641,6 @@
             }
         }
 
-        // LÓGICA DE CENTRADO (MIRA FIJA)
         function centrarVistaEnProgresiva(S) {
             if (!dataProyeccion2D) return;
             const logicalW = canvas2D.width / dpr;
@@ -661,14 +648,12 @@
             const paddingRight = 60;
             const w_canvas = logicalW - (paddingLeft + paddingRight);
             
-            // Forzamos el panX para que S quede exactamente en la mitad de la pantalla
             panX = (logicalW / 2) - paddingLeft - (w_canvas - dataProyeccion2D.longitud * escalaGlobal) / 2 - (S - dataProyeccion2D.minS) * escalaGlobal;
             
             reconstruirCacheScreen();
             actualizarHUDCentral();
         }
         
-        // ZOOM INTELIGENTE QUE RESPETA EL CENTRO DE LA PANTALLA
         function aplicarZoomCentrado(nuevoZoom) {
             if (!dataProyeccion2D) return;
             const logicalW = canvas2D.width / dpr;
@@ -676,14 +661,11 @@
             const cx = logicalW / 2;
             const cy = logicalH / 2;
 
-            // 1. Guardar qué coordenadas de mundo están actualmente en el centro de la cruz
             const sCentro = dataProyeccion2D.minS + (cx - transX) / escalaGlobal;
             const zCentro = dataProyeccion2D.minZ_grid + (transY - cy) / escalaGlobal;
 
-            // 2. Cambiar zoom
             zoom2D = nuevoZoom;
 
-            // 3. Pre-calcular nueva escala global sin afectar el render aún
             const paddingLeft = 60, paddingRight = 60, paddingTop = 40;
             const paddingBottom = window.innerWidth <= 768 ? 120 : 60;
             const w_canvas = logicalW - (paddingLeft + paddingRight);
@@ -697,11 +679,9 @@
             const nuevaBaseX = paddingLeft + (w_canvas - rngS * nuevaEscalaGlobal) / 2;
             const nuevaBaseY = paddingTop + (h_canvas + rngZ * nuevaEscalaGlobal) / 2;
 
-            // 4. Ajustar panX y panY para que ese mismo sCentro y zCentro sigan en cx, cy
             panX = cx - nuevaBaseX - (sCentro - dataProyeccion2D.minS) * nuevaEscalaGlobal;
             panY = cy - nuevaBaseY + (zCentro - dataProyeccion2D.minZ_grid) * nuevaEscalaGlobal;
 
-            // Si hay un bloqueo activo, forzamos la corrección estricta al snapS
             if (snapS !== null) {
                 panX = cx - nuevaBaseX - (snapS - dataProyeccion2D.minS) * nuevaEscalaGlobal;
             }
@@ -729,7 +709,6 @@
             bindEvent('btn-prev-profile', 'click', () => cambiarPerfilSiguiente(-1));
             bindEvent('btn-next-profile', 'click', () => cambiarPerfilSiguiente(1));
 
-            // BUSCADOR Y BLOQUEO DE EJE X (SNAP)
             const searchInput = document.getElementById('search-progressive');
 
             searchInput.addEventListener('input', (e) => {
@@ -755,6 +734,15 @@
                         searchInput.style.color = "var(--accent-color)";
                         actualizarHUDCentral();
                     }
+                }
+            });
+
+            bindEvent('btn-refresh-2d', 'click', () => {
+                zoom2D = 1.0; panX = 0; panY = 0; snapS = null; 
+                document.getElementById('search-progressive').value = '';
+                document.getElementById('search-progressive').style.color = "var(--accent-color)";
+                if(dataProyeccion2D) {
+                    centrarVistaEnProgresiva(dataProyeccion2D.minS + (dataProyeccion2D.maxS - dataProyeccion2D.minS)/2);
                 }
             });
 
@@ -824,16 +812,6 @@
 
             window.addEventListener('resize', onWindowResize);
             
-            const factorBoton = window.innerWidth <= 768 ? 1.2 : 1.3;
-
-            bindEvent('btn-zoom-in', 'click', () => aplicarZoomCentrado(Math.min(30, zoom2D * factorBoton)));
-            bindEvent('btn-zoom-out', 'click', () => aplicarZoomCentrado(Math.max(0.5, zoom2D / factorBoton)));
-            bindEvent('btn-zoom-reset', 'click', () => {
-                zoom2D = 1.0; panX = 0; panY = 0; snapS = null; 
-                document.getElementById('search-progressive').value = '';
-                reconstruirCacheScreen(); actualizarHUDCentral();
-            });
-            
             if (canvas2D) {
                 let isDragging2D = false;
                 let startDragX = 0, startDragY = 0;
@@ -867,7 +845,6 @@
                     const dx = curX - startDragX;
                     const dy = curY - startDragY;
 
-                    // Si hay snapS activo, ignoramos el paneo horizontal (dx)
                     if (snapS === null) panX = originalPanX + dx;
                     panY = originalPanY + dy;
                     
@@ -1296,7 +1273,6 @@
                 titleEl.style.color = "var(--accent-color)";
                 isProcessing2D = false;
                 
-                // Centrar inicialmente el perfil en la pantalla
                 centrarVistaEnProgresiva(globalMinS + (globalMaxS - globalMinS)/2);
             }
         }
@@ -1423,7 +1399,6 @@
             ctxCache.drawImage(rawMeshCanvas, transX, transY - screenHeight, screenWidth, screenHeight);
             ctxCache.restore();
             
-            // Dibujar cruz inamovible
             dibu2D();
         }
 
@@ -1442,7 +1417,6 @@
                 const cx = logicalW / 2;
                 const cy = logicalH / 2;
 
-                // Línea de plomada si está en modo "Snap" (Bloqueado)
                 if (snapS !== null) {
                     ctx2D.strokeStyle = "rgba(255, 235, 59, 0.4)"; 
                     ctx2D.lineWidth = 2;
@@ -1453,7 +1427,6 @@
                     ctx2D.setLineDash([]);
                 }
 
-                // Mira Central (Crosshair de Precisión)
                 ctx2D.strokeStyle = "rgba(255, 255, 255, 0.95)";
                 ctx2D.lineWidth = 1.5;
                 ctx2D.shadowColor = "rgba(0,0,0,0.8)";
@@ -1463,7 +1436,6 @@
                 ctx2D.moveTo(cx, cy - 16); ctx2D.lineTo(cx, cy + 16);
                 ctx2D.stroke();
 
-                // Punto central neón
                 ctx2D.fillStyle = "var(--accent-color)";
                 ctx2D.shadowBlur = 0;
                 ctx2D.beginPath(); ctx2D.arc(cx, cy, 2.5, 0, Math.PI*2); ctx2D.fill();
@@ -1472,7 +1444,6 @@
             }
         }
 
-        // NUEVA FUNCIÓN QUE ACTUALIZA TODO BASADO EN EL CENTRO EXACTO DE LA PANTALLA
         function actualizarHUDCentral() {
             if (!dataProyeccion2D || isProcessing2D) return;
 
@@ -1482,20 +1453,18 @@
             let cursorMundoS = dataProyeccion2D.minS + (cx - transX) / escalaGlobal;
             let cursorMundoZ = dataProyeccion2D.minZ_grid + (transY - cy) / escalaGlobal;
 
-            if (snapS !== null) cursorMundoS = snapS; // Respetar matemáticamente el bloqueo
+            if (snapS !== null) cursorMundoS = snapS; 
 
-            dibu2D(); // Refrescar gráficos
+            dibu2D(); 
 
             const laserInfo = document.getElementById('laser-info');
 
-            // Apagar láser si miramos al vacío
             if (cursorMundoS < dataProyeccion2D.minS || cursorMundoS > dataProyeccion2D.maxS) {
                 laserInfo.style.display = 'none';
                 laserMesh.visible = false;
                 return;
             }
 
-            // Sincronizar Esfera Roja en Escena 3D
             let coordsReales = obtenerCoordenadasReales(cursorMundoS);
             let xScene = 0, yScene = 0, zScene = 0;
 
@@ -1510,38 +1479,48 @@
                 laserMesh.visible = true;
             }
 
-            // Raycast al Terreno para profundidad
-            let profTerreno = "N/A";
-            let colorProf = "#fff";
-            if (terrenoMesh && Number.isFinite(xScene)) {
-                const raycaster = new THREE.Raycaster(new THREE.Vector3(xScene, yScene, 999999), new THREE.Vector3(0, 0, -1));
-                const intersects = raycaster.intersectObject(terrenoMesh, false);
-                if (intersects.length > 0) {
-                    const diff = intersects[0].point.z - zScene;
-                    if (diff >= 0) {
-                        profTerreno = diff.toFixed(1) + " m";
-                        colorProf = "#81c784";
-                    } else {
-                        profTerreno = "Aire";
-                        colorProf = "#ffb74d";
-                    }
-                } else {
-                    profTerreno = "Lejos";
-                    colorProf = "#aaa";
-                }
-            } else {
-                profTerreno = "Sin Terreno";
-                colorProf = "#aaa";
-            }
-
-            // Actualizar interfaz HUD
             document.getElementById('hud-s').innerText = cursorMundoS.toFixed(1) + " m";
             document.getElementById('hud-z').innerText = cursorMundoZ.toFixed(1) + " m";
-            const elProf = document.getElementById('hud-prof');
-            elProf.innerText = profTerreno;
-            elProf.style.color = colorProf;
             
             laserInfo.style.display = 'flex';
+
+            /* ==== SOLUCIÓN DE RENDIMIENTO ==== */
+            // Pausar el cálculo pesado (Raycast 3D) mientras se arrastra la pantalla
+            const elProf = document.getElementById('hud-prof');
+            elProf.innerText = "---";
+            elProf.style.color = "#888";
+
+            if (raycastTimeout) clearTimeout(raycastTimeout);
+
+            raycastTimeout = setTimeout(() => {
+                let profTerreno = "N/A";
+                let colorProf = "#fff";
+                
+                if (terrenoMesh && Number.isFinite(xScene)) {
+                    const raycaster = new THREE.Raycaster(new THREE.Vector3(xScene, yScene, 999999), new THREE.Vector3(0, 0, -1));
+                    const intersects = raycaster.intersectObject(terrenoMesh, false);
+                    if (intersects.length > 0) {
+                        const diff = intersects[0].point.z - zScene;
+                        if (diff >= 0) {
+                            profTerreno = diff.toFixed(1) + " m";
+                            colorProf = "#81c784";
+                        } else {
+                            profTerreno = "Aire";
+                            colorProf = "#ffb74d";
+                        }
+                    } else {
+                        profTerreno = "Lejos";
+                        colorProf = "#aaa";
+                    }
+                } else {
+                    profTerreno = "Sin Terreno";
+                    colorProf = "#aaa";
+                }
+                
+                elProf.innerText = profTerreno;
+                elProf.style.color = colorProf;
+            }, 100); 
+            // Espera a que pasen 100ms de inactividad de arrastre para calcular.
         }
 
         function actualizarUILista(nombre, tipo, rawData = null) {
