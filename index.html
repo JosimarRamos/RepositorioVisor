@@ -30,7 +30,7 @@
             display: flex; 
             width: 100vw; 
             height: 100vh; 
-            height: 100dvh; /* Altura dinámica para evitar el desborde por barra de navegación móvil */
+            height: 100dvh; 
             overflow: hidden; 
             position: relative; 
         }
@@ -127,8 +127,28 @@
         .file-drop-zone:hover { border-color: var(--accent-color); color: var(--accent-color); background: rgba(41, 182, 246, 0.05); }
         .file-input { display: none; }
         
-        .layer-item { display: flex; align-items: center; justify-content: space-between; background: rgba(255, 255, 255, 0.05); padding: 10px; margin-bottom: 8px; border-radius: 6px; font-size: 12px; border-left: 3px solid #555; transition: border-color 0.3s; }
-        .layer-item.active-2d { background: rgba(41, 182, 246, 0.1); border-left-color: var(--accent-color); border-right: 2px solid var(--accent-color); }
+        /* Estilos de Items de Capas y Resaltado de Selección Activa */
+        .layer-item { 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between; 
+            background: rgba(255, 255, 255, 0.05); 
+            padding: 10px; 
+            margin-bottom: 8px; 
+            border-radius: 6px; 
+            font-size: 12px; 
+            border-left: 3px solid #555; 
+            transition: border-color 0.3s, background-color 0.2s; 
+        }
+        .layer-item.active-2d { 
+            background-color: rgba(41, 182, 246, 0.15) !important; 
+            border-left-color: var(--accent-color) !important; 
+            border-right: 2px solid var(--accent-color) !important; 
+        }
+        .layer-item.active-2d span[id^="name-"] {
+            color: var(--accent-color) !important;
+            font-weight: bold !important;
+        }
         .layer-actions { display: flex; gap: 10px; align-items: center; }
         
         .btn-action { background: none; border: none; cursor: pointer; font-size: 13px; padding: 2px; opacity: 0.8; transition: opacity 0.2s; }
@@ -192,7 +212,7 @@
         @media (max-width: 768px) {
             #views-container { flex-direction: column; height: 100%; }
             #view-3d { border-right: none; border-bottom: 2px solid var(--border-color); }
-            .viewport { height: 50%; } /* Dimensionamiento explícito a la mitad en celular */
+            .viewport { height: 50%; } 
             #sidebar { position: absolute; height: 100vh; height: 100dvh; left: 0; top: 0; max-width: 85vw; z-index: 1000; box-shadow: 2px 0 15px rgba(0,0,0,0.5); }
             #sidebar.collapsed { width: 0; border-right: none; box-shadow: none; }
             #sidebar-content { padding-bottom: 120px !important; }
@@ -207,7 +227,6 @@
             
             #active-profile-title { max-width: 80px; overflow: hidden; text-overflow: ellipsis; }
             
-            /* Ajustes del HUD en móvil: Barra fija en la base real absoluta */
             #laser-info { gap: 15px; padding: 6px 15px; border-radius: 0; bottom: 0; }
             .hud-label { font-size: 8px; }
             .hud-value { font-size: 12px; }
@@ -642,12 +661,18 @@
         function actualizarEstadoVinculoTXT() {
             for (const profileName in perfilesRawData) {
                 const safeId = profileName.replace(/[^a-zA-Z0-9]/g, '_');
-                const badge = document.getElementById(`badge-txt-${safeId}`);
-                if (badge) {
+                const nameSpan = document.getElementById(`name-${safeId}`);
+                if (nameSpan) {
                     if (profileToTxtMap[profileName]) {
-                        badge.style.display = 'inline-block';
+                        // Subrayado sutil dashed verde sobre el nombre del perfil
+                        nameSpan.style.textDecoration = 'underline';
+                        nameSpan.style.textDecorationColor = '#81c784';
+                        nameSpan.style.textDecorationStyle = 'dashed';
+                        nameSpan.style.textDecorationThickness = '1.5px';
+                        nameSpan.title = "Progresivas TXT Vinculadas";
                     } else {
-                        badge.style.display = 'none';
+                        nameSpan.style.textDecoration = 'none';
+                        nameSpan.title = "";
                     }
                 }
             }
@@ -1721,24 +1746,23 @@
             div.id = `capa-${safeId}`; 
             div.className = 'layer-item';
 
+            // HTML simplificado: se eliminó el botón explícito de Vista 2D para ahorrar espacio horizontal
             div.innerHTML = `
-                <div style="display:flex; flex-direction:column; width:100%;">
-                    <div style="display:flex; align-items:center; gap:8px; width:100%; overflow:hidden;">
-                        <label class="switch" style="transform: scale(0.8); transform-origin: left center; margin:0;">
-                            <input type="checkbox" checked id="chk-vis-${safeId}">
-                            <span class="slider"></span>
-                        </label>
-                        <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight:500; color:#ddd; font-size: 13px;">
+                <div style="display:flex; align-items:center; width:100%; gap:8px;">
+                    <label class="switch" style="transform: scale(0.8); transform-origin: left center; margin:0; flex-shrink:0;">
+                        <input type="checkbox" checked id="chk-vis-${safeId}">
+                        <span class="slider"></span>
+                    </label>
+                    
+                    <!-- Al hacer clic sobre el nombre del perfil se activa la vista 2D automáticamente -->
+                    <div id="btn-select-${safeId}" style="flex-grow:1; overflow:hidden; cursor:pointer; display:flex; align-items:center; padding: 4px 0;" title="Click para proyectar en vista 2D">
+                        <span id="name-${safeId}" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight:500; color:#ddd; font-size: 13px; transition: color 0.2s;">
                             ${nombre.replace(".json", "")}
                         </span>
-                        
-                        ${tipo === 'perfil' ? `<span id="badge-txt-${safeId}" style="background:#81c784; padding:2px 4px; border-radius:3px; font-size:9px; color:#000; font-weight:bold; display:none;" title="Progresiva TXT Vinculada">TXT</span>` : ''}
+                    </div>
 
-                        <div style="flex-grow:1;"></div>
-                        <div class="layer-actions">
-                            ${tipo === 'perfil' ? `<button class="btn-action btn-view-2d" style="border: 1px solid #444; border-radius: 4px; padding: 3px 6px; color:#81c784; font-size:11px; display:flex; align-items:center; gap:4px;" title="Generar proyección 2D">👁️ Vista 2D</button>` : ''}
-                            <button class="btn-action btn-del" style="color:var(--danger-color); padding: 0 4px; font-size:14px; font-weight:bold;" title="Eliminar archivo">&times;</button>
-                        </div>
+                    <div class="layer-actions" style="flex-shrink:0;">
+                        <button class="btn-action btn-del" style="color:var(--danger-color); padding: 0 4px; font-size:14px; font-weight:bold;" title="Eliminar archivo">&times;</button>
                     </div>
                 </div>`;
 
@@ -1747,8 +1771,9 @@
                 else if (tipo === 'perfil' && perfilesCargados[nombre]) { perfilesCargados[nombre].forEach(mesh => mesh.visible = e.target.checked); }
             });
 
+            // Se vincula la interacción táctil/clic del área del nombre para gatillar la vista 2D
             if (tipo === 'perfil') {
-                div.querySelector('.btn-view-2d').addEventListener('click', () => activarPerfil2D(nombre, rawData));
+                div.querySelector(`#btn-select-${safeId}`).addEventListener('click', () => activarPerfil2D(nombre, rawData));
             }
             
             div.querySelector('.btn-del').addEventListener('click', () => {
