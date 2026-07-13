@@ -161,12 +161,13 @@
             <div id="sidebar-content">
                 <h1 style="border:none; margin-bottom: 15px; font-size:16px; color: var(--accent-color); text-transform: uppercase; letter-spacing: 1px; margin-top:0;">Visor Geofísico</h1>
                 
+                <!-- SECCIÓN 1: Colapsada por defecto -->
                 <div class="accordion-item">
-                    <div class="accordion-header active" onclick="toggleAccordion(this)">
+                    <div class="accordion-header" onclick="toggleAccordion(this)">
                         <div class="accordion-title"><span class="accordion-icon">🗄️</span> 1. IMPORTAR DATOS</div>
-                        <span class="chevron">▲</span>
+                        <span class="chevron">▼</span>
                     </div>
-                    <div class="accordion-content" style="display: block;">
+                    <div class="accordion-content" style="display: none;">
                         <div class="file-drop-zone" onclick="document.getElementById('file-loader').click()">
                             <span id="drop-text">Cargar JSON (Terreno/Perfil) o TXT (Progresivas)</span>
                             <input type="file" id="file-loader" class="file-input" accept=".json, .txt" multiple>
@@ -174,12 +175,13 @@
                     </div>
                 </div>
 
+                <!-- SECCIÓN 2: Colapsada por defecto -->
                 <div class="accordion-item">
-                    <div class="accordion-header active" onclick="toggleAccordion(this)">
-                        <div class="accordion-title"><span class="accordion-icon">⚙️</span> 2. AJUSTES DE TERRENO</div>
-                        <span class="chevron">▲</span>
+                    <div class="accordion-header" onclick="toggleAccordion(this)">
+                        <div class="accordion-title"><span class="accordion-icon">⚙️</span> 2. AJUSTES TERRENO</div>
+                        <span class="chevron">▼</span>
                     </div>
-                    <div class="accordion-content" style="display: block;">
+                    <div class="accordion-content" style="display: none;">
                         <div class="setting-row">
                             <span class="setting-label">Mostrar Terreno</span>
                             <label class="switch">
@@ -213,6 +215,7 @@
                     </div>
                 </div>
 
+                <!-- SECCIÓN 3: Desplegada por defecto (Limpia) -->
                 <div class="accordion-item" style="flex-grow: 1; display: flex; flex-direction: column;">
                     <div class="accordion-header active" onclick="toggleAccordion(this)">
                         <div class="accordion-title"><span class="accordion-icon">🗺️</span> 3. CAPAS ACTIVAS</div>
@@ -224,6 +227,20 @@
                         </div>
                     </div>
                 </div>
+                
+                <!-- SECCIÓN 4: Nueva para Progresivas TXT (Colapsada por defecto) -->
+                <div class="accordion-item">
+                    <div class="accordion-header" onclick="toggleAccordion(this)">
+                        <div class="accordion-title"><span class="accordion-icon">🛤️</span> 4. DATOS PROGRESIVAS</div>
+                        <span class="chevron">▼</span>
+                    </div>
+                    <div class="accordion-content" style="display: none; padding: 10px;">
+                        <div id="lista-progresivas">
+                            <div id="empty-txt-msg" style="font-size: 12px; color: #555; text-align: center; padding: 10px; border: 1px dashed #333; border-radius: 6px;">Sin progresivas (TXT)</div>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
 
@@ -257,7 +274,7 @@
                 
                 <div id="laser-info">
                     <div class="hud-stat">
-                        <span class="hud-label">Sondeo (S)</span>
+                        <span class="hud-label">Progresiva (S)</span>
                         <span class="hud-value" id="hud-s">0.0 m</span>
                     </div>
                     <div class="hud-divider"></div>
@@ -300,7 +317,9 @@
         const perfilesCargados = {}; 
         const perfilesRawData = {}; 
         
+        // Estructuras para gestionar la nueva lógica TXT <-> Perfil
         const progresivasCargadas = {}; 
+        const profileToTxtMap = {}; // Guarda qué TXT pertenece a qué Perfil: { 'Perfil1.json': 'PL1.txt' }
 
         let centerOffset = null; 
         let activeProfileName = null; 
@@ -376,7 +395,6 @@
         }
 
         async function cargarDatosPreestablecidos() {
-            // OPTIMIZACIÓN: Cargas concurrentes para evitar pausas de red innecesarias
             fetch('terreno_web.json').then(async res => {
                 if (res.ok) {
                     const data = await res.json();
@@ -435,29 +453,104 @@
             if(data.length > 0) {
                 data.sort((a,b) => a.s - b.s); 
                 progresivasCargadas[filename] = data;
-                actualizarUILista(filename, 'progresiva');
+                
+                // Intentar Auto-Asignar (Ej. PL1.txt -> Perfil1.json)
+                let alt1 = filename.replace('PL', 'Perfil').replace('.txt', '.json');
+                let alt2 = filename.replace('.txt', '.json');
+                
+                if (perfilesRawData[alt1] && !profileToTxtMap[alt1]) {
+                    profileToTxtMap[alt1] = filename;
+                } else if (perfilesRawData[alt2] && !profileToTxtMap[alt2]) {
+                    profileToTxtMap[alt2] = filename;
+                }
+                
+                renderListaProgresivas();
                 actualizarEstadoVinculoTXT(); 
             }
         }
 
-        function actualizarEstadoVinculoTXT() {
-            for (const perfilName in perfilesRawData) {
-                const safeId = perfilName.replace(/[^a-zA-Z0-9]/g, '_');
-                const statusEl = document.getElementById(`status-txt-${safeId}`);
-                if (!statusEl) continue;
+        // Renderiza la nueva Sección 4
+        function renderListaProgresivas() {
+            const container = document.getElementById('lista-progresivas');
+            const txtNames = Object.keys(progresivasCargadas);
+            
+            if (txtNames.length === 0) {
+                container.innerHTML = `<div id="empty-txt-msg" style="font-size: 12px; color: #555; text-align: center; padding: 10px; border: 1px dashed #333; border-radius: 6px;">Sin progresivas (TXT)</div>`;
+                return;
+            }
 
-                const txtName = perfilName.replace('Perfil', 'PL').replace('.json', '.txt');
-                const altName = perfilName.replace('.json', '.txt');
+            container.innerHTML = '';
+            const perfilesDisponibles = Object.keys(perfilesRawData);
+
+            txtNames.forEach(txtName => {
+                const div = document.createElement('div');
+                div.className = 'layer-item';
+                div.style.flexDirection = 'column';
+                div.style.alignItems = 'stretch';
+                div.style.gap = '6px';
                 
-                if (progresivasCargadas[txtName]) {
-                    statusEl.innerHTML = `✅ Perfil desenrollado según: <span style="color:#fff; font-weight:bold;">${txtName}</span>`;
-                    statusEl.style.color = "#81c784";
-                } else if (progresivasCargadas[altName]) {
-                    statusEl.innerHTML = `✅ Perfil desenrollado según: <span style="color:#fff; font-weight:bold;">${altName}</span>`;
-                    statusEl.style.color = "#81c784";
-                } else {
-                    statusEl.innerHTML = `⚠️ Sin TXT. Modo Respaldo: Curva Aproximada.`;
-                    statusEl.style.color = "#ffb74d";
+                let currentProfile = "";
+                for (const [pName, tName] of Object.entries(profileToTxtMap)) {
+                    if (tName === txtName) currentProfile = pName;
+                }
+
+                let optionsHtml = `<option value="">-- Ninguno --</option>`;
+                perfilesDisponibles.forEach(pName => {
+                    const selected = pName === currentProfile ? 'selected' : '';
+                    optionsHtml += `<option value="${pName}" ${selected}>${pName.replace('.json', '')}</option>`;
+                });
+
+                div.innerHTML = `
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span style="font-size: 12px; font-weight:bold; color:#ddd; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                            📄 ${txtName}
+                        </span>
+                        <button class="btn-action btn-del-txt" style="color:var(--danger-color); font-size:14px; font-weight:bold;" title="Eliminar archivo TXT">&times;</button>
+                    </div>
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap: 5px;">
+                        <span style="font-size:10px; color:#888;">Asignar a:</span>
+                        <select class="txt-select-profile" style="background:#222; border:1px solid #444; color:#fff; font-size:11px; padding:2px 4px; border-radius:4px; flex-grow:1; outline:none; cursor:pointer;">
+                            ${optionsHtml}
+                        </select>
+                    </div>
+                `;
+
+                div.querySelector('.btn-del-txt').addEventListener('click', () => {
+                    delete progresivasCargadas[txtName];
+                    if (currentProfile) delete profileToTxtMap[currentProfile];
+                    renderListaProgresivas();
+                    actualizarEstadoVinculoTXT();
+                    if (activeProfileName === currentProfile) activarPerfil2D(activeProfileName, perfilesRawData[activeProfileName]);
+                });
+
+                div.querySelector('.txt-select-profile').addEventListener('change', (e) => {
+                    const newProfile = e.target.value;
+                    for (const pName in profileToTxtMap) {
+                        if (profileToTxtMap[pName] === txtName) delete profileToTxtMap[pName];
+                    }
+                    if (newProfile) profileToTxtMap[newProfile] = txtName;
+                    
+                    actualizarEstadoVinculoTXT();
+                    if (activeProfileName === newProfile || activeProfileName === currentProfile) {
+                        activarPerfil2D(activeProfileName, perfilesRawData[activeProfileName]);
+                    }
+                });
+
+                container.appendChild(div);
+            });
+        }
+
+        // Actualiza el sutil Badge "TXT" verde en la Sección 3
+        function actualizarEstadoVinculoTXT() {
+            for (const profileName in perfilesRawData) {
+                const safeId = profileName.replace(/[^a-zA-Z0-9]/g, '_');
+                const badge = document.getElementById(`badge-txt-${safeId}`);
+                if (badge) {
+                    if (profileToTxtMap[profileName]) {
+                        badge.style.display = 'inline-block';
+                    } else {
+                        badge.style.display = 'none';
+                    }
                 }
             }
         }
@@ -496,9 +589,8 @@
 
         function obtenerCoordenadasReales(S) {
             if (!activeProfileName) return null;
-            let txtName = activeProfileName.replace('Perfil', 'PL').replace('.json', '.txt');
-            let altName = activeProfileName.replace('.json', '.txt');
-            let txtData = progresivasCargadas[txtName] || progresivasCargadas[altName];
+            let txtName = profileToTxtMap[activeProfileName];
+            let txtData = txtName ? progresivasCargadas[txtName] : null;
             
             if (txtData) {
                 return obtenerCoordenadasDesdeS(S, txtData); 
@@ -787,7 +879,6 @@
                     aplicarZoomCentrado(Math.max(0.5, Math.min(30, zoom2D * zoomFactor)));
                 }, { passive: false });
 
-                // OPTIMIZACIÓN DEL ARRASTRE PARA PREVENIR SALTOS (INCREMENTAL)
                 canvas2D.addEventListener('mousedown', (e) => {
                     if (!dataProyeccion2D) return;
                     isDragging2D = true;
@@ -829,7 +920,7 @@
 
                 canvas2D.addEventListener('touchmove', (e) => {
                     if (!dataProyeccion2D) return;
-                    e.preventDefault(); // EVITA el scroll nativo
+                    e.preventDefault(); 
 
                     if (isPinchZooming && e.touches.length === 2) {
                         const dx = e.touches[0].clientX - e.touches[1].clientX;
@@ -859,7 +950,6 @@
                     if (e.touches.length < 2) {
                         isPinchZooming = false;
                         if (e.touches.length === 1) {
-                            // Previene saltos cuando sueltas un dedo pero sigues moviendo el otro
                             lastPanClientX = e.touches[0].clientX;
                             lastPanClientY = e.touches[0].clientY;
                         }
@@ -977,9 +1067,7 @@
                 }
             }
 
-            if (carasSuperficie.length + carasCortina.length === 0) {
-                return;
-            }
+            if (carasSuperficie.length + carasCortina.length === 0) return;
 
             let isFirstLoad = (terrenoMesh === null);
 
@@ -1098,6 +1186,7 @@
                 }
             }
             
+            renderListaProgresivas();
             actualizarEstadoVinculoTXT(); 
         }
 
@@ -1134,7 +1223,7 @@
             laserMesh.visible = false;
             document.getElementById('laser-info').style.display = 'none';
 
-            await new Promise(r => setTimeout(r, 20)); // Esperar para UI update
+            await new Promise(r => setTimeout(r, 20)); 
 
             let minZ = Infinity, maxZ = -Infinity;
             let countVertices = 0;
@@ -1152,9 +1241,8 @@
 
             if (countVertices === 0) { isProcessing2D = false; return; }
 
-            let txtName = nombre.replace('Perfil', 'PL').replace('.json', '.txt');
-            let altName = nombre.replace('.json', '.txt');
-            let txtData = progresivasCargadas[txtName] || progresivasCargadas[altName];
+            let txtName = profileToTxtMap[nombre];
+            let txtData = txtName ? progresivasCargadas[txtName] : null;
             
             let poliLineaActiva = txtData || crearSpineFallback(data);
             
@@ -1170,7 +1258,6 @@
                 }
             }
 
-            // OPTIMIZACIÓN EXTREMA: Struct of Arrays (SoA) para compilar en C++ internamente con V8
             const segCount = optSegments.length;
             const s_p1x = new Float32Array(segCount);
             const s_p1y = new Float32Array(segCount);
@@ -1193,7 +1280,6 @@
             let globalMinS = Infinity, globalMaxS = -Infinity;
             const estratosProyectados = [];
 
-            // Bucle principal de Proyección 2D (Ahora ~100x más rápido)
             for (let c = 0; c < data.length; c++) {
                 let capa = data[c];
                 const vLen = capa.vertices.length;
@@ -1208,7 +1294,6 @@
                         let minDistSq = Infinity;
                         let bestS = 0;
                         
-                        // Este bucle ahora vuela porque usa puramente matemáticas lineales con Float32
                         for (let j = 0; j < segCount; j++) {
                             let l2 = s_l2[j];
                             let t = 0;
@@ -1242,7 +1327,6 @@
                     pIdx++;
                 }
 
-                // Ceder control al UI solo por capa, no cada 15,000 vértices (ahorra segundos)
                 await new Promise(r => setTimeout(r, 0));
                 if (myRenderId !== currentRenderId) return; 
 
@@ -1526,6 +1610,9 @@
         }
 
         function actualizarUILista(nombre, tipo, rawData = null) {
+            // Solo para terreno y perfiles, los TXT van en su propia sección
+            if (tipo === 'progresiva') return;
+
             const container = document.getElementById('lista-capas');
             const emptyMsg = document.getElementById('empty-list-msg');
             if (emptyMsg) emptyMsg.remove();
@@ -1536,75 +1623,62 @@
             const div = document.createElement('div');
             div.id = `capa-${safeId}`; 
             div.className = 'layer-item';
-            
-            let extraHTML = "";
-            if (tipo === 'perfil') {
-                extraHTML = `<div id="status-txt-${safeId}" style="font-size: 10.5px; color: #ffb74d; margin-top: 4px; padding-left: 42px; font-style: italic; letter-spacing: 0.5px;">⚠️ Sin TXT. Modo Respaldo: Curva Aproximada.</div>`;
-            }
 
-            if (tipo === 'progresiva') {
-                div.innerHTML = `
-                    <div style="display:flex; align-items:center; gap:10px; width:100%; overflow:hidden;">
-                        <span style="font-size: 16px; margin-left:4px;">📍</span>
+            div.innerHTML = `
+                <div style="display:flex; flex-direction:column; width:100%;">
+                    <div style="display:flex; align-items:center; gap:8px; width:100%; overflow:hidden;">
+                        <label class="switch" style="transform: scale(0.8); transform-origin: left center; margin:0;">
+                            <input type="checkbox" checked id="chk-vis-${safeId}">
+                            <span class="slider"></span>
+                        </label>
                         <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight:500; color:#ddd; font-size: 13px;">
-                            ${nombre}
+                            ${nombre.replace(".json", "")}
                         </span>
+                        
+                        ${tipo === 'perfil' ? `<span id="badge-txt-${safeId}" style="background:#81c784; padding:2px 4px; border-radius:3px; font-size:9px; color:#000; font-weight:bold; display:none;" title="Progresiva TXT Vinculada">TXT</span>` : ''}
+
                         <div style="flex-grow:1;"></div>
                         <div class="layer-actions">
+                            ${tipo === 'perfil' ? `<button class="btn-action btn-view-2d" style="border: 1px solid #444; border-radius: 4px; padding: 3px 6px; color:#81c784; font-size:11px; display:flex; align-items:center; gap:4px;" title="Generar proyección 2D">👁️ Vista 2D</button>` : ''}
                             <button class="btn-action btn-del" style="color:var(--danger-color); padding: 0 4px; font-size:14px; font-weight:bold;" title="Eliminar archivo">&times;</button>
                         </div>
-                    </div>`;
-            } else {
-                div.innerHTML = `
-                    <div style="display:flex; flex-direction:column; width:100%;">
-                        <div style="display:flex; align-items:center; gap:10px; width:100%; overflow:hidden;">
-                            <label class="switch" style="transform: scale(0.8); transform-origin: left center; margin:0;">
-                                <input type="checkbox" checked id="chk-vis-${safeId}">
-                                <span class="slider"></span>
-                            </label>
-                            <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight:500; color:#ddd; font-size: 13px;">
-                                ${nombre.replace(".json", "")}
-                            </span>
-                            <div style="flex-grow:1;"></div>
-                            <div class="layer-actions">
-                                ${tipo === 'perfil' ? `<button class="btn-action btn-view-2d" style="border: 1px solid #444; border-radius: 4px; padding: 3px 6px; color:#81c784; font-size:11px; display:flex; align-items:center; gap:4px;" title="Generar proyección 2D">👁️ Vista 2D</button>` : ''}
-                                <button class="btn-action btn-del" style="color:var(--danger-color); padding: 0 4px; font-size:14px; font-weight:bold;" title="Eliminar archivo">&times;</button>
-                            </div>
-                        </div>
-                        ${extraHTML}
-                    </div>`;
+                    </div>
+                </div>`;
 
-                div.querySelector(`#chk-vis-${safeId}`).addEventListener('change', (e) => {
-                    if (tipo === 'terreno' && terrenoMesh) { terrenoMesh.visible = e.target.checked; document.getElementById('chk-terreno').checked = e.target.checked; } 
-                    else if (tipo === 'perfil' && perfilesCargados[nombre]) { perfilesCargados[nombre].forEach(mesh => mesh.visible = e.target.checked); }
-                });
+            div.querySelector(`#chk-vis-${safeId}`).addEventListener('change', (e) => {
+                if (tipo === 'terreno' && terrenoMesh) { terrenoMesh.visible = e.target.checked; document.getElementById('chk-terreno').checked = e.target.checked; } 
+                else if (tipo === 'perfil' && perfilesCargados[nombre]) { perfilesCargados[nombre].forEach(mesh => mesh.visible = e.target.checked); }
+            });
 
-                if (tipo === 'perfil') {
-                    div.querySelector('.btn-view-2d').addEventListener('click', () => activarPerfil2D(nombre, rawData));
-                }
+            if (tipo === 'perfil') {
+                div.querySelector('.btn-view-2d').addEventListener('click', () => activarPerfil2D(nombre, rawData));
             }
-
+            
             div.querySelector('.btn-del').addEventListener('click', () => {
                 if (tipo === 'terreno' && terrenoMesh) { 
                     scene.remove(terrenoMesh); liberarMemoriaMesh(terrenoMesh); terrenoMesh = null; terrenoCrudoData = null; nombreArchivoTerreno = null; 
                 } else if (tipo === 'perfil' && perfilesCargados[nombre]) {
                     perfilesCargados[nombre].forEach(mesh => { scene.remove(mesh); liberarMemoriaMesh(mesh); }); 
                     delete perfilesCargados[nombre]; delete perfilesRawData[nombre];
+                    delete profileToTxtMap[nombre]; // Limpiar asociación TXT
+                    
                     if (activeProfileName === nombre) {
                         activeProfileName = null; dataProyeccion2D = null; currentRenderId++; isProcessing2D = false;
                         laserMesh.visible = false; document.getElementById('laser-info').style.display = 'none';
                         document.getElementById('active-profile-title').innerText = "[Ninguno]";
                         ctx2D.fillStyle = '#0a0a0a'; ctx2D.fillRect(0, 0, canvas2D.width, canvas2D.height);
                     }
-                } else if (tipo === 'progresiva') {
-                    delete progresivasCargadas[nombre];
                 }
                 
                 div.remove();
                 if (container.children.length === 0) container.innerHTML = `<div id="empty-list-msg" style="font-size: 12px; color: #555; text-align: center; padding: 15px; border: 1px dashed #333; border-radius: 6px;">Ningún archivo cargado</div>`;
                 
-                actualizarEstadoVinculoTXT(); 
+                if (tipo === 'perfil') {
+                    renderListaProgresivas();
+                    actualizarEstadoVinculoTXT(); 
+                }
             });
+            
             container.appendChild(div);
         }
 
