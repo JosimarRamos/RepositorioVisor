@@ -2,7 +2,8 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- FASE 2: Bloqueo de zoom nativo a nivel de viewport -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Visor Geofísico Bidimensional / Tridimensional</title>
     <style>
         :root {
@@ -35,7 +36,9 @@
         #view-2d { background-color: #0b0b0b; display: flex; flex-direction: column; transition: flex 0.3s ease, width 0.3s ease, height 0.3s ease, opacity 0.3s ease; position: relative; }
         
         #canvas-3d { width: 100%; height: 100%; }
-        #canvas-2d { flex-grow: 1; width: 100%; height: 100%; display: block; background-color: #0a0a0a; cursor: grab; outline: none; }
+        
+        /* FASE 2: Bloqueo de gestos por defecto para evitar zoom global */
+        #canvas-2d { flex-grow: 1; width: 100%; height: 100%; display: block; background-color: #0a0a0a; cursor: grab; outline: none; touch-action: none; }
         #canvas-2d:active { cursor: grabbing; }
         
         .accordion-item { margin-bottom: 12px; }
@@ -84,12 +87,9 @@
         
         #view-2d-header { background-color: #1a1a1a; border-bottom: 1px solid var(--border-color); padding: 10px 20px; font-size: 13px; font-weight: bold; color: #ccc; display: flex; justify-content: space-between; align-items: center; white-space: nowrap; }
         
-        /* FASE 2: Nuevo Buscador Avanzado */
+        /* FASE 2: Buscador Simplificado Izquierdo */
         .search-prog-container { display: flex; align-items: center; background: #111; border: 1px solid var(--border-color); border-radius: 6px; overflow: hidden; margin-left: 10px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.5); }
-        .step-btn { background: #222; border: none; color: #aaa; padding: 4px 10px; cursor: pointer; font-size: 11px; font-weight: bold; transition: background 0.2s, color 0.2s; user-select: none; }
-        .step-btn:hover { background: var(--accent-color); color: #000; }
-        #search-progressive { background: transparent; border: none; border-left: 1px solid #333; border-right: 1px solid #333; color: var(--accent-color); padding: 4px 6px; font-size: 13px; width: 65px; text-align: center; outline: none; font-family: monospace; font-weight: bold; -moz-appearance: textfield; }
-        #search-progressive::-webkit-outer-spin-button, #search-progressive::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        #search-progressive { background: transparent; border: none; color: var(--accent-color); padding: 5px 10px; font-size: 13px; width: 100px; text-align: center; outline: none; font-family: monospace; font-weight: bold; }
         #search-progressive::placeholder { color: #555; font-family: 'Segoe UI', sans-serif; font-weight: normal; }
 
         .header-title-text { font-size: 13px; font-weight: bold; color: white; }
@@ -105,7 +105,7 @@
 
         #tooltip-2d { position: absolute; background: rgba(15, 15, 15, 0.95); border: 1px solid var(--border-color); padding: 8px 12px; border-radius: 6px; pointer-events: none; font-family: 'Segoe UI', sans-serif; display: none; z-index: 100; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
 
-        #laser-info { position: absolute; bottom: 25px; right: 25px; background: rgba(20, 20, 20, 0.95); border: 1px solid var(--danger-color); padding: 12px 15px; border-radius: 8px; display: none; font-size: 13px; line-height: 1.4; z-index: 100; box-shadow: 0 4px 20px rgba(255, 82, 82, 0.15); pointer-events: none; max-width: 240px; }
+        #laser-info { position: absolute; bottom: 25px; right: 25px; background: rgba(20, 20, 20, 0.95); border: 1px solid var(--border-color); padding: 12px 15px; border-radius: 8px; display: none; font-size: 13px; line-height: 1.4; z-index: 100; box-shadow: 0 4px 20px rgba(0,0,0,0.5); pointer-events: none; max-width: 240px; }
         #laser-info span.val { color: #81c784; font-weight: bold; }
 
         #dpad-container { position: absolute; bottom: 25px; left: 25px; display: none; flex-direction: column; align-items: center; gap: 4px; background: rgba(15, 15, 15, 0.85); padding: 12px; border-radius: 50px; border: 1px solid #444; z-index: 100; user-select: none; box-shadow: 0 4px 15px rgba(0,0,0,0.5); backdrop-filter: blur(5px); }
@@ -119,6 +119,10 @@
         #zoom-controls-2d { position: absolute; top: 60px; right: 20px; display: flex; flex-direction: column; gap: 8px; z-index: 101; }
         .zoom-btn { width: 36px; height: 36px; border-radius: 6px; background: rgba(20, 20, 20, 0.85); color: var(--text-color); border: 1px solid var(--border-color); font-size: 16px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s, color 0.2s; backdrop-filter: blur(4px); user-select: none; }
         .zoom-btn:hover { background: var(--accent-color); color: #000; border-color: var(--accent-color); }
+        
+        /* Botón de Restaurar Vista Destacado */
+        #btn-zoom-reset { background: rgba(255, 183, 77, 0.15); color: #ffb74d; border-color: #ffb74d; font-size: 18px; }
+        #btn-zoom-reset:hover { background: #ffb74d; color: #000; border-color: #ffb74d; }
 
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
@@ -142,15 +146,14 @@
             #main-wrapper.is-2d-collapsed #btn-toggle-2d { transform: rotate(180deg); }
             
             #view-2d-header { padding: 10px 8px; font-size: 11px; }
-            .header-title-text { display: none; } /* Oculta texto "SECCIÓN GEOFÍSICA" para hacer espacio */
+            .header-title-text { display: none; } 
             .search-prog-container { margin-left: 0; }
-            #search-progressive { width: 55px; font-size: 11px; }
-            .step-btn { padding: 4px 6px; }
+            #search-progressive { width: 70px; font-size: 11px; }
             
             #active-profile-title { max-width: 80px; overflow: hidden; text-overflow: ellipsis; }
             
-            /* D-Pad ahora visible en móvil */
-            #dpad-container { transform: scale(0.85); transform-origin: bottom left; bottom: 15px; left: 15px; padding: 8px; }
+            /* D-Pad visible en móvil para micro-ajustes */
+            #dpad-container { display: flex; transform: scale(0.85); transform-origin: bottom left; bottom: 15px; left: 15px; padding: 8px; }
             
             #laser-info { bottom: 25px; right: 15px; padding: 10px 12px; font-size: 11px; max-width: 150px; box-shadow: 0 4px 15px rgba(0,0,0,0.6); border-radius: 6px; }
         }
@@ -253,11 +256,9 @@
                         <button id="btn-toggle-2d" title="Ocultar/Mostrar panel 2D">▼</button>
                         <span class="header-title-text" style="margin-left:8px;">2D</span>
                         
-                        <!-- FASE 2: Buscador a la Izquierda con Saltos -->
+                        <!-- FASE 2: Buscador Simplificado -->
                         <div class="search-prog-container">
-                            <button id="btn-search-minus" class="step-btn" title="Restar 50m">-50</button>
-                            <input type="number" id="search-progressive" placeholder="Prog" title="Ingresar Progresiva Exacta">
-                            <button id="btn-search-plus" class="step-btn" title="Sumar 50m">+50</button>
+                            <input type="number" id="search-progressive" placeholder="🔍 Prog. (m)" title="Ingresar Progresiva Exacta y dar Enter para fijar">
                         </div>
                     </div>
 
@@ -271,7 +272,7 @@
                 <div id="zoom-controls-2d">
                     <button class="zoom-btn" id="btn-zoom-in" title="Acercar">+</button>
                     <button class="zoom-btn" id="btn-zoom-out" title="Alejar">-</button>
-                    <button class="zoom-btn" id="btn-zoom-reset" title="Restaurar escala">R</button>
+                    <button class="zoom-btn" id="btn-zoom-reset" title="Restaurar vista original (Ajustar)">⟲</button>
                 </div>
 
                 <canvas id="canvas-2d" tabindex="0"></canvas>
@@ -640,41 +641,43 @@
             return spine;
         }
 
-        function toggle2DPanel() {
-            document.getElementById('main-wrapper').classList.toggle('is-2d-collapsed');
-            setTimeout(onWindowResize, 310);
-        }
-
-        function cambiarPerfilSiguiente(direccion) {
-            const nombres = Object.keys(perfilesRawData);
-            if (nombres.length === 0) return;
-            let idx = nombres.indexOf(activeProfileName);
-            if (idx === -1) {
-                idx = 0;
-            } else {
-                idx = (idx + direccion + nombres.length) % nombres.length;
-            }
-            const nuevoNombre = nombres[idx];
-            if (nuevoNombre && perfilesRawData[nuevoNombre]) {
-                activarPerfil2D(nuevoNombre, perfilesRawData[nuevoNombre]);
-            }
-        }
-
+        // FASE 2: Centrado y Alineación Vertical Inteligente al cambiar a progresiva fija
         function centrarVistaEnProgresiva(S) {
             if (!dataProyeccion2D) return;
             const logicalW = canvas2D.width / dpr;
             const logicalH = canvas2D.height / dpr;
             const paddingLeft = 60;
             const paddingRight = 60;
+            const paddingTop = 40;
+            const paddingBottom = 60;
             const w_canvas = logicalW - (paddingLeft + paddingRight);
+            const h_canvas = logicalH - (paddingTop + paddingBottom);
+
+            const rngS = Math.max(dataProyeccion2D.maxS - dataProyeccion2D.minS, 1);
+            const rngZ = Math.max(dataProyeccion2D.maxZ_grid - dataProyeccion2D.minZ_grid, 1);
             
-            panX = (logicalW / 2) - paddingLeft - (w_canvas - dataProyeccion2D.longitud * escalaGlobal) / 2 - (S - dataProyeccion2D.minS) * escalaGlobal;
-            
+            // Re-calculo de escala global momentánea
+            escalaGlobal = Math.min(w_canvas / rngS, h_canvas / rngZ) * zoom2D;
+
+            // Alineación Horizontal (X): Fijar progresiva al centro de la mira
+            panX = (logicalW / 2) - paddingLeft - (w_canvas - rngS * escalaGlobal) / 2 - (S - dataProyeccion2D.minS) * escalaGlobal;
+
+            // Alineación Vertical (Y): Al último punto seleccionado si existe, sino al centro
+            if (clickedPoint2D) {
+                const targetY = logicalH / 2;
+                const baseTransY = paddingTop + (h_canvas + rngZ * escalaGlobal) / 2;
+                const zOffset = (clickedPoint2D.z - dataProyeccion2D.minZ_grid) * escalaGlobal;
+                panY = targetY + zOffset - baseTransY;
+            } else {
+                panY = 0; // Centrado por defecto en altura media
+            }
+
             reconstruirCacheScreen();
             
-            // Colocar cursor justo al medio para disparar la profundidad media
+            // Mira Central Fija se activa
             cursorX = logicalW / 2;
             cursorY = logicalH / 2;
+            isCursorActive = true;
             updateCursor2D();
             triggerCursorClick();
         }
@@ -698,30 +701,8 @@
             bindEvent('btn-prev-profile', 'click', () => cambiarPerfilSiguiente(-1));
             bindEvent('btn-next-profile', 'click', () => cambiarPerfilSiguiente(1));
 
-            // FASE 2: Eventos del Buscador de Progresivas y Saltos Rápidos
+            // FASE 2: Buscador Simplificado de Progresivas
             const searchInput = document.getElementById('search-progressive');
-            const btnMinus = document.getElementById('btn-search-minus');
-            const btnPlus = document.getElementById('btn-search-plus');
-
-            const jumpProgressive = (delta) => {
-                if (!dataProyeccion2D) return;
-                let current = snapS !== null ? snapS : dataProyeccion2D.minS;
-                let target;
-                if (delta > 0) target = Math.floor((current + delta) / 50) * 50;
-                else target = Math.ceil((current + delta) / 50) * 50;
-                
-                target = Math.max(dataProyeccion2D.minS, Math.min(dataProyeccion2D.maxS, target));
-                
-                searchInput.value = target;
-                snapS = target;
-                isCursorActive = true;
-                searchInput.style.color = "var(--accent-color)";
-                centrarVistaEnProgresiva(target);
-            };
-
-            btnMinus.addEventListener('click', () => jumpProgressive(-50));
-            btnPlus.addEventListener('click', () => jumpProgressive(50));
-
             searchInput.addEventListener('input', (e) => {
                 if (!dataProyeccion2D) return;
                 const val = parseFloat(e.target.value);
@@ -828,12 +809,24 @@
                 reconstruirCacheScreen();
                 if (isCursorActive) updateCursor2D();
             });
+            
+            // FASE 2: Botón Ajustar/Restaurar Vista Original
             bindEvent('btn-zoom-reset', 'click', () => {
                 zoom2D = 1.0;
                 panX = 0;
                 panY = 0;
+                snapS = null;
+                clickedPoint2D = null;
+                document.getElementById('search-progressive').value = '';
                 reconstruirCacheScreen();
-                if (isCursorActive) updateCursor2D();
+                
+                const logicalW = canvas2D.width / dpr;
+                const logicalH = canvas2D.height / dpr;
+                cursorX = logicalW / 2;
+                cursorY = logicalH / 2;
+                isCursorActive = true;
+                updateCursor2D();
+                triggerCursorClick();
             });
             
             if (canvas2D) {
@@ -870,35 +863,38 @@
                     const curX = e.clientX - rect.left;
                     const curY = e.clientY - rect.top;
 
+                    // FASE 2: El paneo desplaza la imagen bajo la mira central fija
                     if (isDragging2D) {
                         const dx = curX - startDragX;
                         const dy = curY - startDragY;
                         if (Math.hypot(dx, dy) > 4) {
                             dragMoved = true;
-                            panX = originalPanX + dx;
-                            panY = originalPanY + dy;
+                            if (snapS !== null) {
+                                panY = originalPanY + dy; // Bloquear X en modo snap
+                            } else {
+                                panX = originalPanX + dx;
+                                panY = originalPanY + dy;
+                            }
                             reconstruirCacheScreen();
+                            
+                            // Forzar mira al centro del canvas lógico
+                            const logicalW = canvas2D.width / dpr;
+                            const logicalH = canvas2D.height / dpr;
+                            cursorX = logicalW / 2;
+                            cursorY = logicalH / 2;
+                            isCursorActive = true;
+                            updateCursor2D();
+                            triggerCursorClick(); // Actualizar 3D en tiempo real
                         }
-                    } else {
-                        cursorX = curX;
-                        cursorY = curY;
-                        isCursorActive = true;
-                        updateCursor2D();
                     }
                 });
 
                 canvas2D.addEventListener('mouseup', (e) => {
-                    if (isDragging2D) {
-                        isDragging2D = false;
-                        if (!dragMoved) triggerCursorClick();
-                    }
+                    if (isDragging2D) isDragging2D = false;
                 });
 
                 canvas2D.addEventListener('mouseleave', () => { 
                     isDragging2D = false;
-                    isCursorActive = false;
-                    if (tooltip2D) tooltip2D.style.display = 'none'; 
-                    dibu2D(); 
                 });
 
                 canvas2D.addEventListener('touchstart', (e) => {
@@ -914,8 +910,10 @@
                         originalPanX = panX;
                         originalPanY = panY;
                         
-                        // Show offset cursor immediately on touch
-                        cursorX = startDragX; cursorY = startDragY;
+                        // Forzar mira al centro lógicos
+                        const logicalW = canvas2D.width / dpr;
+                        const logicalH = canvas2D.height / dpr;
+                        cursorX = logicalW / 2; cursorY = logicalH / 2;
                         isCursorActive = true; updateCursor2D();
                     } else if (e.touches.length === 2) {
                         isPinchZooming = true;
@@ -940,6 +938,12 @@
                             zoom2D = Math.max(0.5, Math.min(30, zoom2D * dampFactor));
                             touchStartDist = currentDist;
                             reconstruirCacheScreen();
+                            
+                            const logicalW = canvas2D.width / dpr;
+                            const logicalH = canvas2D.height / dpr;
+                            cursorX = logicalW / 2; cursorY = logicalH / 2;
+                            isCursorActive = true; updateCursor2D();
+                            triggerCursorClick();
                         }
                     } else if (isDragging2D && e.touches.length === 1) {
                         e.preventDefault();
@@ -950,12 +954,19 @@
 
                         if (Math.hypot(dx, dy) > 5) {
                             dragMoved = true;
-                            panX = originalPanX + dx;
-                            panY = originalPanY + dy;
+                            if (snapS !== null) {
+                                panY = originalPanY + dy;
+                            } else {
+                                panX = originalPanX + dx;
+                                panY = originalPanY + dy;
+                            }
                             reconstruirCacheScreen();
-                        } else {
-                            // Update offset cursor
-                            cursorX = curX; cursorY = curY; updateCursor2D();
+                            
+                            const logicalW = canvas2D.width / dpr;
+                            const logicalH = canvas2D.height / dpr;
+                            cursorX = logicalW / 2; cursorY = logicalH / 2;
+                            isCursorActive = true; updateCursor2D();
+                            triggerCursorClick();
                         }
                     }
                 }, { passive: false });
@@ -963,15 +974,6 @@
                 canvas2D.addEventListener('touchend', (e) => {
                     if (isDragging2D) {
                         isDragging2D = false;
-                        if (!dragMoved && !isPinchZooming) {
-                            const rect = canvas2D.getBoundingClientRect();
-                            if (e.changedTouches.length > 0) {
-                                cursorX = e.changedTouches[0].clientX - rect.left;
-                                cursorY = e.changedTouches[0].clientY - rect.top;
-                                isCursorActive = true;
-                                triggerCursorClick();
-                            }
-                        }
                         isPinchZooming = false;
                     }
                 });
@@ -980,33 +982,43 @@
                     if (!dataProyeccion2D || isProcessing2D || !isCursorActive) return;
                     if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
 
-                    const logicalW = canvas2D.width / dpr;
-                    const logicalH = canvas2D.height / dpr;
-                    let step = e.shiftKey ? 10 : 1;
+                    let step = e.shiftKey ? 10 : 2;
                     let moved = false;
                     
+                    // Flechas ahora mueven el perfil geofísico por debajo de la mira fija
                     switch (e.key) {
-                        case 'ArrowLeft': cursorX -= step; moved = true; break;
-                        case 'ArrowRight': cursorX += step; moved = true; break;
-                        case 'ArrowUp': cursorY -= step; moved = true; break;
-                        case 'ArrowDown': cursorY += step; moved = true; break;
-                        case 'Enter': 
-                        case ' ': triggerCursorClick(); e.preventDefault(); return;
+                        case 'ArrowLeft': if (snapS === null) { panX += step; moved = true; } break;
+                        case 'ArrowRight': if (snapS === null) { panX -= step; moved = true; } break;
+                        case 'ArrowUp': panY += step; moved = true; break;
+                        case 'ArrowDown': panY -= step; moved = true; break;
                     }
                     if (moved) {
-                        cursorX = Math.max(0, Math.min(logicalW, cursorX));
-                        cursorY = Math.max(0, Math.min(logicalH, cursorY));
+                        reconstruirCacheScreen();
+                        const logicalW = canvas2D.width / dpr;
+                        const logicalH = canvas2D.height / dpr;
+                        cursorX = logicalW / 2;
+                        cursorY = logicalH / 2;
+                        isCursorActive = true;
                         updateCursor2D(); e.preventDefault();
+                        triggerCursorClick();
                     }
                 });
             }
 
             let dpadInterval;
             const startMove = (dx, dy) => {
-                const logicalW = canvas2D.width / dpr;
-                const logicalH = canvas2D.height / dpr;
-                if(!isCursorActive) { cursorX = logicalW/2; cursorY = logicalH/2; isCursorActive = true; }
-                const move = () => { cursorX = Math.max(0, Math.min(logicalW, cursorX+dx)); cursorY = Math.max(0, Math.min(logicalH, cursorY+dy)); updateCursor2D(); };
+                const move = () => { 
+                    if (snapS !== null && dx !== 0) return; // Bloquear X en snap
+                    panX += dx; 
+                    panY += dy; 
+                    reconstruirCacheScreen();
+                    
+                    const logicalW = canvas2D.width / dpr;
+                    const logicalH = canvas2D.height / dpr;
+                    cursorX = logicalW / 2; cursorY = logicalH / 2;
+                    isCursorActive = true; updateCursor2D();
+                    triggerCursorClick();
+                };
                 move();
                 dpadInterval = setInterval(move, 50);
             };
@@ -1020,8 +1032,8 @@
                 el.addEventListener('touchstart', (e) => { e.preventDefault(); startMove(dx, dy); }, {passive: false});
                 el.addEventListener('touchend', stopMove);
             };
-            bindDpad('btn-up', 0, -2); bindDpad('btn-down', 0, 2);
-            bindDpad('btn-left', -2, 0); bindDpad('btn-right', 2, 0);
+            bindDpad('btn-up', 0, 3); bindDpad('btn-down', 0, -3);
+            bindDpad('btn-left', 3, 0); bindDpad('btn-right', -3, 0);
             
             const btnCenter = document.getElementById('btn-center');
             btnCenter.addEventListener('mousedown', triggerCursorClick);
@@ -1260,196 +1272,6 @@
             actualizarEstadoVinculoTXT(); 
         }
 
-        async function activarPerfil2D(nombre, data) {
-            if (isProcessing2D) return; 
-            
-            document.getElementById('main-wrapper').classList.remove('is-2d-collapsed');
-            setTimeout(onWindowResize, 310);
-
-            isProcessing2D = true;
-            currentRenderId++;
-            const myRenderId = currentRenderId;
-
-            activeProfileName = nombre;
-            
-            snapS = null;
-            const searchInput = document.getElementById('search-progressive');
-            if (searchInput) {
-                searchInput.value = '';
-                searchInput.style.color = "var(--accent-color)";
-            }
-            
-            zoom2D = 1.0;
-            panX = 0;
-            panY = 0;
-
-            const titleEl = document.getElementById('active-profile-title');
-            titleEl.innerText = `[ Calculando... ]`;
-            titleEl.style.color = "#ffb74d"; 
-
-            const safeId = nombre.replace(/[^a-zA-Z0-9]/g, '_');
-            document.querySelectorAll('.layer-item').forEach(el => el.classList.remove('active-2d'));
-            const capDiv = document.getElementById(`capa-${safeId}`);
-            if(capDiv) capDiv.classList.add('active-2d');
-
-            clickedPoint2D = null;
-            laserMesh.visible = false;
-            document.getElementById('laser-info').style.display = 'none';
-            isCursorActive = false;
-
-            await new Promise(r => setTimeout(r, 20));
-
-            let minZ = Infinity, maxZ = -Infinity;
-            let countVertices = 0;
-
-            data.forEach(capa => {
-                for (let i = 0; i < capa.vertices.length; i += 3) {
-                    let vz = capa.vertices[i+2];
-                    if (Number.isFinite(vz)) {
-                        if (vz < minZ) minZ = vz;
-                        if (vz > maxZ) maxZ = vz;
-                        countVertices++;
-                    }
-                }
-            });
-
-            if (countVertices === 0) { isProcessing2D = false; return; }
-
-            let txtName = nombre.replace('Perfil', 'PL').replace('.json', '.txt');
-            let altName = nombre.replace('.json', '.txt');
-            let txtData = progresivasCargadas[txtName] || progresivasCargadas[altName];
-            
-            let poliLineaActiva = txtData || crearSpineFallback(data);
-            
-            const optSegments = [];
-            if (poliLineaActiva && poliLineaActiva.length > 1) {
-                for (let i = 0; i < poliLineaActiva.length - 1; i++) {
-                    let p1 = poliLineaActiva[i];
-                    let p2 = poliLineaActiva[i+1];
-                    let dx = p2.x - p1.x;
-                    let dy = p2.y - p1.y;
-                    let l2 = dx*dx + dy*dy;
-                    optSegments.push({ p1, p2, dx, dy, l2 });
-                }
-            }
-
-            let globalMinS = Infinity, globalMaxS = -Infinity;
-            const estratosProyectados = [];
-            
-            let verticesProcesados = 0;
-
-            for (let c = 0; c < data.length; c++) {
-                let capa = data[c];
-                const vertices2D = [];
-                
-                for (let i = 0; i < capa.vertices.length; i += 3) {
-                    if (verticesProcesados > 0 && verticesProcesados % 15000 === 0) {
-                        await new Promise(r => setTimeout(r, 0));
-                        if (myRenderId !== currentRenderId) return; 
-                    }
-                    verticesProcesados++;
-
-                    let vx = capa.vertices[i], vy = capa.vertices[i+1], vz = capa.vertices[i+2];
-                    if (Number.isFinite(vx)) {
-                        let s = proyectarXYEnSegmentosPrecalculados(vx, vy, optSegments);
-                        
-                        if (s < globalMinS) globalMinS = s;
-                        if (s > globalMaxS) globalMaxS = s;
-                        vertices2D.push({ s: s, z: vz });
-                    } else {
-                        vertices2D.push({ s: 0, z: 0 }); 
-                    }
-                }
-                estratosProyectados.push({ color: capa.color, caras: capa.caras, vertices: vertices2D });
-            }
-
-            if (txtData && txtData.length > 0) {
-                globalMinS = txtData[0].s;
-                globalMaxS = txtData[txtData.length - 1].s;
-            }
-
-            const rangeS = globalMaxS - globalMinS || 1;
-            laserMesh.scale.setScalar(Math.max(rangeS * 0.015, 14)); 
-
-            minZ_grid = Math.floor(minZ / 50) * 50;
-            const maxZ_grid = Math.ceil(maxZ / 50) * 50;
-
-            dataProyeccion2D = { 
-                estratos: estratosProyectados, 
-                longitud: rangeS, 
-                minS: globalMinS, 
-                maxS: globalMaxS, 
-                minZ: minZ, 
-                maxZ: maxZ, 
-                minZ_grid: minZ_grid, 
-                maxZ_grid: maxZ_grid,
-                spineFallback: !txtData ? poliLineaActiva : null 
-            };
-            
-            await generarRawMeshAsync(myRenderId);
-
-            if (myRenderId === currentRenderId) {
-                titleEl.innerText = nombre.replace(".json", "");
-                titleEl.style.color = "var(--accent-color)";
-                isProcessing2D = false;
-            }
-        }
-
-        async function generarRawMeshAsync(renderId) {
-            const rngS = Math.max(dataProyeccion2D.maxS - dataProyeccion2D.minS, 1);
-            const rngZ = Math.max(dataProyeccion2D.maxZ_grid - dataProyeccion2D.minZ_grid, 1);
-
-            rawMeshCanvas.width = 8192; 
-            escalaRaw = rawMeshCanvas.width / rngS;
-            rawMeshCanvas.height = Math.max(1, rngZ * escalaRaw);
-            
-            ctxRaw.clearRect(0, 0, rawMeshCanvas.width, rawMeshCanvas.height);
-            
-            let totalCaras = 0, carasProcesadas = 0;
-            dataProyeccion2D.estratos.forEach(c => totalCaras += c.caras.length / 3);
-            const titleEl = document.getElementById('active-profile-title');
-
-            const CHUNK_FACES = 10000; 
-
-            for (let capa of dataProyeccion2D.estratos) {
-                if (renderId !== currentRenderId) return; 
-
-                ctxRaw.fillStyle = capa.color;
-                ctxRaw.strokeStyle = capa.color; 
-                ctxRaw.lineWidth = 0.5;
-
-                for (let i = 0; i < capa.caras.length; i += CHUNK_FACES * 3) {
-                    ctxRaw.beginPath(); 
-                    
-                    let limit = Math.min(i + CHUNK_FACES * 3, capa.caras.length);
-                    for (let j = i; j < limit; j += 3) {
-                        const v0 = capa.vertices[capa.caras[j]];
-                        const v1 = capa.vertices[capa.caras[j+1]];
-                        const v2 = capa.vertices[capa.caras[j+2]];
-                        if (!v0 || !v1 || !v2) continue;
-
-                        let x0 = (v0.s - dataProyeccion2D.minS) * escalaRaw;
-                        let y0 = rawMeshCanvas.height - (v0.z - dataProyeccion2D.minZ_grid) * escalaRaw;
-                        let x1 = (v1.s - dataProyeccion2D.minS) * escalaRaw;
-                        let y1 = rawMeshCanvas.height - (v1.z - dataProyeccion2D.minZ_grid) * escalaRaw;
-                        let x2 = (v2.s - dataProyeccion2D.minS) * escalaRaw;
-                        let y2 = rawMeshCanvas.height - (v2.z - dataProyeccion2D.minZ_grid) * escalaRaw;
-
-                        ctxRaw.moveTo(x0, y0); ctxRaw.lineTo(x1, y1); ctxRaw.lineTo(x2, y2); ctxRaw.lineTo(x0, y0); 
-                    }
-                    ctxRaw.fill(); ctxRaw.stroke();
-
-                    carasProcesadas += (limit - i) / 3;
-                    reconstruirCacheScreen(); 
-                    titleEl.innerText = `Renderizando [ ${Math.round((carasProcesadas / totalCaras) * 100)}% ]...`;
-                    
-                    await new Promise(resolve => requestAnimationFrame(resolve));
-                    if (renderId !== currentRenderId) return;
-                }
-            }
-            reconstruirCacheScreen(); 
-        }
-
         function reconstruirCacheScreen() {
             if (!dataProyeccion2D || !canvas2D) return;
             
@@ -1469,7 +1291,7 @@
             const paddingLeft = 60;
             const paddingRight = 60;
             const paddingTop = 40;
-            const paddingBottom = isMobile ? 120 : 60;
+            const paddingBottom = 60;
 
             const w_canvas = logicalW - (paddingLeft + paddingRight);
             const h_canvas = logicalH - (paddingTop + paddingBottom);
@@ -1485,36 +1307,84 @@
             transX = paddingLeft + (w_canvas - rngS * escalaGlobal) / 2 + panX;
             transY = paddingTop + (h_canvas + rngZ * escalaGlobal) / 2 + panY; 
 
-            ctxCache.strokeStyle = "rgba(255, 255, 255, 0.1)";
+            // FASE 2: CÁLCULO DE PASOS Y MARCADORES DINÁMICOS
+            const spanS = w_canvas / escalaGlobal;
+            const spanZ = h_canvas / escalaGlobal;
+
+            // Buscamos tener aproximadamente entre 6 y 10 líneas en pantalla
+            const targetStepS = spanS / 8;
+            const targetStepZ = spanZ / 6;
+
+            const niceStepsS = [10000, 5000, 2000, 1000, 500, 200, 100, 50, 20, 10];
+            let pasoS = 10;
+            for (let step of niceStepsS) {
+                if (targetStepS >= step) { pasoS = step; break; }
+            }
+            pasoS = Math.max(10, pasoS); // Límite mínimo de 10m en progresiva
+
+            const niceStepsZ = [10000, 5000, 2000, 1000, 500, 200, 100, 50, 20, 10, 5];
+            let pasoZ = 5;
+            for (let step of niceStepsZ) {
+                if (targetStepZ >= step) { pasoZ = step; break; }
+            }
+            pasoZ = Math.max(5, pasoZ); // Límite mínimo de 5m en elevación
+
+            // Definimos el Viewport de visualización
+            const vpLeft = paddingLeft;
+            const vpRight = logicalW - paddingRight;
+            const vpTop = paddingTop;
+            const vpBottom = logicalH - paddingBottom;
+
+            // Dibujar grilla de fondo (sólo líneas)
+            ctxCache.strokeStyle = "rgba(255, 255, 255, 0.08)";
+            ctxCache.lineWidth = 1;
+
+            // 1. Grilla Horizontal (Elevación Z) y Etiquetas Estáticas en el Margen Izquierdo (Sticky)
             ctxCache.fillStyle = "#888888"; 
             ctxCache.font = "11px 'Segoe UI', Tahoma, sans-serif";
-            
-            let pasoS = rngS > 1000000 ? 100000 : rngS > 100000 ? 10000 : rngS > 20000 ? 2000 : rngS > 5000 ? 500 : rngS > 1000 ? 100 : 50;
-            let pasoZ = rngZ > 1000000 ? 100000 : rngZ > 100000 ? 10000 : rngZ > 20000 ? 2000 : rngZ > 5000 ? 500 : rngZ > 1000 ? 100 : 50;
+            ctxCache.textAlign = "right";
+            ctxCache.textBaseline = "middle";
 
-            for (let z = dataProyeccion2D.minZ_grid; z <= dataProyeccion2D.maxZ_grid; z += pasoZ) {
+            let startZ = Math.floor(dataProyeccion2D.minZ_grid / pasoZ) * pasoZ;
+            for (let z = startZ; z <= dataProyeccion2D.maxZ_grid; z += pasoZ) {
                 let y = transY - (z - dataProyeccion2D.minZ_grid) * escalaGlobal;
-                ctxCache.beginPath(); ctxCache.moveTo(transX, y); ctxCache.lineTo(transX + rngS * escalaGlobal, y); ctxCache.stroke();
-                ctxCache.fillText(`${z}m`, transX - 50, y + 4);
+                if (y >= vpTop && y <= vpBottom) {
+                    ctxCache.beginPath(); ctxCache.moveTo(vpLeft, y); ctxCache.lineTo(vpRight, y); ctxCache.stroke();
+                    ctxCache.fillText(`${z}m`, vpLeft - 8, y + 1); // Pegado fijamente al margen
+                }
             }
-            
+
+            // 2. Grilla Vertical (Progresiva S) y Etiquetas Estáticas en el Margen Inferior (Sticky)
             let startS = Math.floor(dataProyeccion2D.minS / pasoS) * pasoS;
             for (let s = startS; s <= dataProyeccion2D.maxS; s += pasoS) {
                 let x = transX + (s - dataProyeccion2D.minS) * escalaGlobal;
-                ctxCache.beginPath(); ctxCache.moveTo(x, transY - rngZ * escalaGlobal); ctxCache.lineTo(x, transY + 10); ctxCache.stroke();
-                
-                ctxCache.save();
-                ctxCache.translate(x, transY + 18);
-                ctxCache.rotate(-Math.PI / 4); 
-                ctxCache.textAlign = "right";
-                ctxCache.textBaseline = "middle";
-                ctxCache.fillText(`S:${Math.round(s)}m`, 0, 0);
-                ctxCache.restore();
+                if (x >= vpLeft && x <= vpRight) {
+                    ctxCache.beginPath(); ctxCache.moveTo(x, vpTop); ctxCache.lineTo(x, vpBottom); ctxCache.stroke();
+                    
+                    ctxCache.save();
+                    ctxCache.translate(x, vpBottom + 12);
+                    ctxCache.rotate(-Math.PI / 4); 
+                    ctxCache.fillText(`S:${Math.round(s)}m`, 0, 0);
+                    ctxCache.restore();
+                }
             }
+
+            // Marco del Viewport principal
+            ctxCache.strokeStyle = "rgba(255, 255, 255, 0.2)";
+            ctxCache.lineWidth = 1.5;
+            ctxCache.strokeRect(vpLeft, vpTop, w_canvas, h_canvas);
+
+            // Dibujar perfil geofísico recortado limpiamente en el Viewport (Clipping)
+            ctxCache.save();
+            ctxCache.beginPath();
+            ctxCache.rect(vpLeft, vpTop, w_canvas, h_canvas);
+            ctxCache.clip();
 
             const screenWidth = rngS * escalaGlobal;
             const screenHeight = rngZ * escalaGlobal;
             ctxCache.drawImage(rawMeshCanvas, transX, transY - screenHeight, screenWidth, screenHeight);
+            
+            ctxCache.restore();
             ctxCache.restore();
             dibu2D();
         }
@@ -1528,140 +1398,121 @@
                 ctx2D.drawImage(canvas2DCache, 0, 0);
 
                 if (clickedPoint2D) {
-                    ctx2D.save();
-                    ctx2D.scale(dpr, dpr);
+                    // Solo dibujar el punto si cae dentro del Viewport visible
+                    const logicalW = canvas2D.width / dpr;
+                    const logicalH = canvas2D.height / dpr;
+                    const vpLeft = 60;
+                    const vpRight = logicalW - 60;
+                    const vpTop = 40;
+                    const vpBottom = logicalH - 60;
+
                     const px = transX + (clickedPoint2D.s - dataProyeccion2D.minS) * escalaGlobal;
                     const py = transY - (clickedPoint2D.z - dataProyeccion2D.minZ_grid) * escalaGlobal;
-                    ctx2D.strokeStyle = "#ff5252"; ctx2D.lineWidth = 2;
-                    ctx2D.beginPath(); ctx2D.arc(px, py, 10, 0, Math.PI*2); ctx2D.stroke();
-                    ctx2D.fillStyle = "#ff5252";
-                    ctx2D.beginPath(); ctx2D.arc(px, py, 3, 0, Math.PI*2); ctx2D.fill();
-                    ctx2D.restore();
+
+                    if (px >= vpLeft && px <= vpRight && py >= vpTop && py <= vpBottom) {
+                        ctx2D.save();
+                        ctx2D.scale(dpr, dpr);
+                        ctx2D.strokeStyle = "#ff5252"; ctx2D.lineWidth = 2;
+                        ctx2D.beginPath(); ctx2D.arc(px, py, 10, 0, Math.PI*2); ctx2D.stroke();
+                        ctx2D.fillStyle = "#ff5252";
+                        ctx2D.beginPath(); ctx2D.arc(px, py, 3, 0, Math.PI*2); ctx2D.fill();
+                        ctx2D.restore();
+                    }
                 }
             }
         }
 
         function updateCursor2D() {
-            if (!dataProyeccion2D || isProcessing2D || !isCursorActive) return;
+            if (!dataProyeccion2D || isProcessing2D) return;
+
+            // FASE 2: Forzar Mira Central Fija en el centro geométrico del Canvas lógico
+            const logicalW = canvas2D.width / dpr;
+            const logicalH = canvas2D.height / dpr;
+            cursorX = logicalW / 2;
+            cursorY = logicalH / 2;
+            isCursorActive = true;
 
             if (snapS !== null) {
-                cursorX = transX + (snapS - dataProyeccion2D.minS) * escalaGlobal;
                 cursorMundoS = snapS;
             } else {
                 cursorMundoS = dataProyeccion2D.minS + (cursorX - transX) / escalaGlobal;
             }
-            
             cursorMundoZ = dataProyeccion2D.minZ_grid + (transY - cursorY) / escalaGlobal;
 
             dibu2D();
 
-            if (cursorMundoS < dataProyeccion2D.minS || cursorMundoS > dataProyeccion2D.maxS) {
-                tooltip2D.style.display = 'none'; return;
-            }
-
-            const logicalW = canvas2D.width / dpr;
-            const logicalH = canvas2D.height / dpr;
-            const isMobile = window.innerWidth <= 768;
-
-            const uiTooltipHTML = `
-                <div style="font-size:14px; font-weight:bold; color:var(--accent-color); margin-bottom: 2px;">Prog: ${cursorMundoS.toFixed(1)} m</div>
-                <div style="font-size:10px; color:#888;">Elev: ${cursorMundoZ.toFixed(1)} m</div>
-            `;
-            
             ctx2D.save();
             ctx2D.scale(dpr, dpr);
 
-            // FASE 2: Línea de Anclaje de Alto Contraste (Snap Line)
+            // FASE 2: Líneas de Cruz de Alta Visibilidad sobre la mira central fija
             if (snapS !== null) {
-                ctx2D.strokeStyle = "#ffeb3b"; // Amarillo Neón
+                ctx2D.strokeStyle = "#ffeb3b"; // Amarillo Neón de Alta Visibilidad
                 ctx2D.lineWidth = 2.5; 
-                ctx2D.setLineDash([]);
-                ctx2D.shadowColor = "rgba(0,0,0,0.8)"; // Sombra para destacar
+                ctx2D.shadowColor = "rgba(0,0,0,0.8)"; 
                 ctx2D.shadowBlur = 4;
                 ctx2D.beginPath(); ctx2D.moveTo(cursorX, 0); ctx2D.lineTo(cursorX, logicalH); ctx2D.stroke();
-                ctx2D.shadowBlur = 0; // reset
-                
-                ctx2D.strokeStyle = "rgba(41, 182, 246, 0.6)"; ctx2D.lineWidth = 1; ctx2D.setLineDash([4, 4]); 
-                ctx2D.beginPath(); ctx2D.moveTo(0, cursorY); ctx2D.lineTo(logicalW, cursorY); ctx2D.stroke();
+                ctx2D.shadowBlur = 0; 
             } else {
-                ctx2D.strokeStyle = "rgba(41, 182, 246, 0.6)"; ctx2D.lineWidth = 1; ctx2D.setLineDash([4, 4]); 
-                ctx2D.beginPath();
-                ctx2D.moveTo(0, cursorY); ctx2D.lineTo(logicalW, cursorY);
-                ctx2D.moveTo(cursorX, 0); ctx2D.lineTo(cursorX, logicalH); 
-                ctx2D.stroke(); 
-            }
-            ctx2D.setLineDash([]); 
-
-            // FASE 2: Offset Lupa en Celular
-            const lupaRadius = isMobile ? 55 : 70; 
-            const zoomLevel = 3;   
-            let drawLupaX = cursorX;
-            let drawLupaY = cursorY;
-            
-            if (isMobile) {
-                // Sube la lupa 80 pixeles por encima del dedo
-                drawLupaY = Math.max(lupaRadius + 5, cursorY - 80); 
-            }
-            
-            ctx2D.beginPath(); ctx2D.arc(drawLupaX, drawLupaY, lupaRadius, 0, Math.PI * 2); ctx2D.clip();
-            ctx2D.fillStyle = "#0a0a0a"; ctx2D.fill();
-
-            ctx2D.imageSmoothingEnabled = false;
-
-            const physCursorX = cursorX * dpr;
-            const physCursorY = cursorY * dpr;
-            const physLupaRadius = lupaRadius * dpr;
-
-            const sx = physCursorX - (physLupaRadius / zoomLevel);
-            const sy = physCursorY - (physLupaRadius / zoomLevel);
-            const sWidth = (physLupaRadius * 2) / zoomLevel;
-            const sHeight = (physLupaRadius * 2) / zoomLevel;
-            
-            ctx2D.drawImage(canvas2DCache, sx, sy, sWidth, sHeight, drawLupaX - lupaRadius, drawLupaY - lupaRadius, lupaRadius * 2, lupaRadius * 2);
-            
-            // FASE 2: Proyectar el punto seleccionado previo dentro de la Lupa
-            if (clickedPoint2D) {
-                const px = transX + (clickedPoint2D.s - dataProyeccion2D.minS) * escalaGlobal;
-                const py = transY - (clickedPoint2D.z - dataProyeccion2D.minZ_grid) * escalaGlobal;
-                
-                // Si el punto cae dentro del rectangulo fuente del recorte
-                if (px >= sx/dpr && px <= (sx+sWidth)/dpr && py >= sy/dpr && py <= (sy+sHeight)/dpr) {
-                    const lX = (drawLupaX - lupaRadius) + ((px * dpr - sx) / sWidth) * (lupaRadius * 2);
-                    const lY = (drawLupaY - lupaRadius) + ((py * dpr - sy) / sHeight) * (lupaRadius * 2);
-                    
-                    ctx2D.strokeStyle = "#ff5252"; ctx2D.lineWidth = 1.5 * zoomLevel;
-                    ctx2D.beginPath(); ctx2D.arc(lX, lY, 10 * zoomLevel, 0, Math.PI*2); ctx2D.stroke();
-                    ctx2D.fillStyle = "#ff5252";
-                    ctx2D.beginPath(); ctx2D.arc(lX, lY, 3 * zoomLevel, 0, Math.PI*2); ctx2D.fill();
-                }
+                ctx2D.strokeStyle = "rgba(41, 182, 246, 0.8)"; 
+                ctx2D.lineWidth = 1.5; 
+                ctx2D.beginPath(); ctx2D.moveTo(cursorX, 0); ctx2D.lineTo(cursorX, logicalH); ctx2D.stroke();
             }
 
-            ctx2D.imageSmoothingEnabled = true;
+            ctx2D.strokeStyle = "rgba(41, 182, 246, 0.8)"; 
+            ctx2D.lineWidth = 1.5;
+            ctx2D.beginPath(); ctx2D.moveTo(0, cursorY); ctx2D.lineTo(logicalW, cursorY); ctx2D.stroke();
 
-            // FASE 2: Crosshair interno super nítido
-            ctx2D.strokeStyle = "rgba(255, 255, 255, 0.9)"; ctx2D.lineWidth = 1.5;
-            ctx2D.beginPath();
-            ctx2D.moveTo(drawLupaX - 10, drawLupaY); ctx2D.lineTo(drawLupaX + 10, drawLupaY);
-            ctx2D.moveTo(drawLupaX, drawLupaY - 10); ctx2D.lineTo(drawLupaX, drawLupaY + 10);
-            ctx2D.stroke();
-            
+            // Puntito central de precisión
             ctx2D.fillStyle = "var(--accent-color)";
-            ctx2D.beginPath(); ctx2D.arc(drawLupaX, drawLupaY, 2, 0, Math.PI*2); ctx2D.fill();
+            ctx2D.beginPath(); ctx2D.arc(cursorX, cursorY, 3, 0, Math.PI*2); ctx2D.fill();
 
-            ctx2D.lineWidth = 3; ctx2D.strokeStyle = "#ffffff";
-            ctx2D.beginPath(); ctx2D.arc(drawLupaX, drawLupaY, lupaRadius, 0, Math.PI * 2); ctx2D.stroke();
             ctx2D.restore();
 
-            tooltip2D.style.display = 'block';
-            tooltip2D.style.left = `${cursorX + canvas2D.getBoundingClientRect().left + (isMobile ? 15 : lupaRadius + 10)}px`; 
-            tooltip2D.style.top = `${cursorY + canvas2D.getBoundingClientRect().top - (isMobile ? 45 : 20)}px`;
-            tooltip2D.innerHTML = uiTooltipHTML;
+            // FASE 2: Ocultar tooltip flotante antiguo y mostrar panel lateral fijo auto-actualizable
+            if (tooltip2D) tooltip2D.style.display = 'none';
+
+            if (cursorMundoS < dataProyeccion2D.minS || cursorMundoS > dataProyeccion2D.maxS) {
+                document.getElementById('laser-info').style.display = 'none'; return;
+            }
+
+            const laserInfo = document.getElementById('laser-info');
+            laserInfo.style.display = 'block';
+
+            let profTerreno = "N/A";
+            let coords = obtenerCoordenadasReales(cursorMundoS);
+            if (coords && terrenoMesh) {
+                const xScene = coords.x - centerOffset.x;
+                const yScene = coords.y - centerOffset.y;
+                const zScene = cursorMundoZ - centerOffset.z;
+                const raycaster = new THREE.Raycaster(new THREE.Vector3(xScene, yScene, 999999), new THREE.Vector3(0, 0, -1));
+                const intersects = raycaster.intersectObject(terrenoMesh, false);
+                if (intersects.length > 0) {
+                    const diff = intersects[0].point.z - zScene;
+                    profTerreno = diff >= 0 ? diff.toFixed(2) + " m" : "Por encima del terreno";
+                } else profTerreno = "Fuera de los límites";
+            }
+
+            const isMobile = window.innerWidth <= 768;
+            if (isMobile) {
+                laserInfo.innerHTML = `
+                    <div style="color:var(--danger-color); font-weight:bold; font-size:10px; margin-bottom:2px; letter-spacing:0.5px;">🎯 MIRA CENTRAL</div>
+                    <div style="font-size:12px; font-weight:bold; line-height:1.2;">Prof. Terreno:<br><span style="color:#81c784; font-size:14px; font-weight:900;">${profTerreno}</span></div>
+                    <div style="font-size:9px; color:#aaa; margin-top:3px; border-top:1px solid #333; padding-top:3px;">S: ${cursorMundoS.toFixed(1)} m | Z: ${cursorMundoZ.toFixed(1)} m</div>
+                `;
+            } else {
+                laserInfo.innerHTML = `
+                    <div style="color:var(--accent-color); font-weight:bold; margin-bottom:8px; border-bottom:1px solid #444; padding-bottom:5px; font-size:11px;">🎯 MIRA CENTRAL</div>
+                    Prof. al Terreno: <span class="val" style="font-size:14px; color:#81c784;">${profTerreno}</span><br>
+                    Progresiva S: <span class="val">${cursorMundoS.toFixed(2)} m</span><br>
+                    Elevación Z: <span class="val">${cursorMundoZ.toFixed(2)} m</span>
+                `;
+            }
         }
 
         function triggerCursorClick() {
-            if (!dataProyeccion2D || isProcessing2D || !isCursorActive) return;
-            if (cursorMundoS < dataProyeccion2D.minS || cursorMundoS > dataProyeccion2D.maxS) return;
-
+            if (!dataProyeccion2D || isProcessing2D) return;
+            
+            // FASE 2: El láser en 3D sigue a la Mira Fija Central de manera continua
             clickedPoint2D = { s: cursorMundoS, z: cursorMundoZ };
 
             let coordsReales = obtenerCoordenadasReales(cursorMundoS);
@@ -1677,36 +1528,6 @@
                 laserMesh.position.set(xScene, yScene, zScene);
                 laserMesh.visible = true;
             }
-
-            let profTerreno = "N/A";
-            if (terrenoMesh && Number.isFinite(xScene)) {
-                const raycaster = new THREE.Raycaster(new THREE.Vector3(xScene, yScene, 999999), new THREE.Vector3(0, 0, -1));
-                const intersects = raycaster.intersectObject(terrenoMesh, false);
-                if (intersects.length > 0) {
-                    const diff = intersects[0].point.z - zScene;
-                    profTerreno = diff >= 0 ? diff.toFixed(2) + " m" : "Por encima del terreno";
-                } else profTerreno = "Fuera de los límites";
-            } else profTerreno = "Terreno no cargado";
-
-            const laserInfo = document.getElementById('laser-info');
-            laserInfo.style.display = 'block';
-
-            const isMobile = window.innerWidth <= 768;
-
-            if (isMobile) {
-                laserInfo.innerHTML = `
-                    <div style="color:var(--danger-color); font-weight:bold; font-size:10px; margin-bottom:2px; letter-spacing:0.5px;">📍 PUNTO SELECCIONADO</div>
-                    <div style="font-size:12px; font-weight:bold; line-height:1.2;">Profundidad al Terreno:<br><span style="color:#81c784; font-size:15px; font-weight:900;">${profTerreno}</span></div>
-                    <div style="font-size:9px; color:#aaa; margin-top:4px; border-top:1px solid #333; padding-top:4px;">Progresiva S: ${cursorMundoS.toFixed(1)} m</div>
-                `;
-            } else {
-                laserInfo.innerHTML = `<div style="color:var(--danger-color); font-weight:bold; margin-bottom:8px; border-bottom:1px solid #444; padding-bottom:5px; font-size:11px;">📍 PUNTO SELECCIONADO</div>
-                    Prof. al Terreno: <span class="val" style="font-size:14px; color:#81c784;">${profTerreno}</span><br>
-                    Progresiva S: <span class="val">${cursorMundoS.toFixed(2)} m</span><br>
-                    Elevación Z: <span class="val">${cursorMundoZ.toFixed(2)} m</span>`;
-            }
-
-            updateCursor2D();
         }
 
         function actualizarUILista(nombre, tipo, rawData = null) {
