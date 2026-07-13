@@ -20,14 +20,15 @@
         body { margin: 0; overflow: hidden; background-color: var(--bg-color); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: var(--text-color); }
         #main-wrapper { display: flex; width: 100vw; height: 100vh; overflow: hidden; position: relative; }
 
-        /* Pantalla de Carga Inicial */
+        /* Pantalla de Carga Inicial Semi-transparente */
         #loading-screen {
             position: fixed;
             top: 0;
             left: 0;
             width: 100vw;
             height: 100vh;
-            background-color: var(--bg-color);
+            background-color: rgba(15, 15, 15, 0.65);
+            backdrop-filter: blur(4px);
             z-index: 9999;
             display: flex;
             flex-direction: column;
@@ -136,7 +137,26 @@
         .btn-profile-nav { background: rgba(255, 255, 255, 0.08); border: 1px solid #444; color: var(--text-color); border-radius: 4px; width: 26px; height: 26px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 11px; transition: background 0.2s, color 0.2s; user-select: none; }
         .btn-profile-nav:hover { background: var(--accent-color); color: #000; border-color: var(--accent-color); }
 
-        #laser-info { position: absolute; bottom: 25px; left: 50%; transform: translateX(-50%); background: rgba(15, 15, 15, 0.90); border: 1px solid #444; padding: 10px 25px; border-radius: 50px; display: none; align-items: center; gap: 25px; z-index: 100; box-shadow: 0 4px 20px rgba(0,0,0,0.6); pointer-events: none; backdrop-filter: blur(5px); }
+        /* HUD de Datos Rediseñado (Barra de estado ultra-baja y delgada) */
+        #laser-info { 
+            position: absolute; 
+            bottom: 0; 
+            left: 0; 
+            width: 100%; 
+            box-sizing: border-box;
+            background: rgba(15, 15, 15, 0.92); 
+            border-top: 1px solid var(--border-color); 
+            padding: 6px 30px; 
+            border-radius: 0;
+            display: none; 
+            align-items: center; 
+            justify-content: center; 
+            gap: 40px; 
+            z-index: 100; 
+            box-shadow: 0 -4px 15px rgba(0,0,0,0.5); 
+            pointer-events: none; 
+            backdrop-filter: blur(5px); 
+        }
         .hud-stat { display: flex; flex-direction: column; align-items: center; }
         .hud-label { font-size: 9px; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; }
         .hud-value { font-size: 14px; font-weight: bold; color: #fff; font-family: monospace; }
@@ -171,11 +191,11 @@
             
             #active-profile-title { max-width: 80px; overflow: hidden; text-overflow: ellipsis; }
             
-            /* Ajustes del panelsito HUD en móvil: se eleva para evitar obstrucción y mejorar accesibilidad */
-            #laser-info { gap: 15px; padding: 8px 20px; border-radius: 30px; bottom: 80px; }
+            /* Ajustes del HUD en móvil: Barra fija en la base absoluta */
+            #laser-info { gap: 15px; padding: 6px 15px; border-radius: 0; bottom: 0; }
             .hud-label { font-size: 8px; }
             .hud-value { font-size: 12px; }
-            .hud-value.highlight { font-size: 14px; }
+            .hud-value.highlight { font-size: 13px; }
         }
     </style>
     <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
@@ -190,10 +210,10 @@
 </head>
 <body>
 
-    <!-- Contenedor Pantalla de Carga -->
+    <!-- Contenedor Pantalla de Carga Semi-transparente -->
     <div id="loading-screen">
         <div class="spinner"></div>
-        <div id="loading-text">Cargando Datos Geofísicos...</div>
+        <div id="loading-text">Cargando visor...</div>
     </div>
 
     <div id="main-wrapper">
@@ -203,7 +223,7 @@
             <div id="sidebar-content">
                 <h1 style="border:none; margin-bottom: 15px; font-size:16px; color: var(--accent-color); text-transform: uppercase; letter-spacing: 1px; margin-top:0;">Visor Geofísico</h1>
                 
-                <!-- SECCIÓN 1: Colapsada por defecto -->
+                <!-- SECCIÓN 1 -->
                 <div class="accordion-item">
                     <div class="accordion-header" onclick="toggleAccordion(this)">
                         <div class="accordion-title"><span class="accordion-icon">🗄️</span> 1. IMPORTAR DATOS</div>
@@ -217,7 +237,7 @@
                     </div>
                 </div>
 
-                <!-- SECCIÓN 2: Colapsada por defecto -->
+                <!-- SECCIÓN 2 -->
                 <div class="accordion-item">
                     <div class="accordion-header" onclick="toggleAccordion(this)">
                         <div class="accordion-title"><span class="accordion-icon">⚙️</span> 2. AJUSTES TERRENO</div>
@@ -257,7 +277,7 @@
                     </div>
                 </div>
 
-                <!-- SECCIÓN 3: Desplegada por defecto -->
+                <!-- SECCIÓN 3 -->
                 <div class="accordion-item" style="flex-grow: 1; display: flex; flex-direction: column;">
                     <div class="accordion-header active" onclick="toggleAccordion(this)">
                         <div class="accordion-title"><span class="accordion-icon">🗺️</span> 3. CAPAS ACTIVAS</div>
@@ -270,7 +290,7 @@
                     </div>
                 </div>
                 
-                <!-- SECCIÓN 4: Progresivas TXT -->
+                <!-- SECCIÓN 4 -->
                 <div class="accordion-item">
                     <div class="accordion-header" onclick="toggleAccordion(this)">
                         <div class="accordion-title"><span class="accordion-icon">🛤️</span> 4. DATOS PROGRESIVAS</div>
@@ -314,7 +334,6 @@
                 
                 <canvas id="canvas-2d" tabindex="0"></canvas>
                 
-                <!-- Panel HUD Modificado: "Progresiva (m)" en lugar de "Progresiva (S)" -->
                 <div id="laser-info">
                     <div class="hud-stat">
                         <span class="hud-label">Progresiva (m)</span>
@@ -438,8 +457,14 @@
 
         async function cargarDatosPreestablecidos() {
             const loadingScreen = document.getElementById('loading-screen');
+            const updateProgress = (text) => {
+                const el = document.getElementById('loading-text');
+                if (el) el.innerText = text;
+            };
+
             try {
-                // Descarga concurrente de terreno si está disponible
+                // 1. Descarga y construcción asíncrona del Terreno 3D
+                updateProgress("Cargando terreno 3D...");
                 const resTerreno = await fetch('terreno_web.json').catch(() => null);
                 if (resTerreno && resTerreno.ok) {
                     const data = await resTerreno.json();
@@ -448,38 +473,65 @@
                     construirTerreno(data, "terreno_web.json");
                 }
 
+                // 2. Descarga y construcción inmediata únicamente de la primera capa (Perfil 1)
+                updateProgress("Cargando perfil principal (1/4)...");
                 const nombresPerfiles = ['Perfil1.json', 'Perfil2.json', 'Perfil3.json', 'Perfil4.json'];
-                
-                const promesasPerfiles = nombresPerfiles.map(async (nombre) => {
+                const primerNombre = nombresPerfiles[0];
+                let primerPerfilData = null;
+
+                try {
+                    const resPerfil = await fetch(primerNombre).catch(() => null);
+                    if (resPerfil && resPerfil.ok) {
+                        primerPerfilData = await resPerfil.json();
+                        construirPerfil(primerPerfilData, primerNombre);
+                        
+                        const nombreTXT = primerNombre.replace('Perfil', 'PL').replace('.json', '.txt');
+                        const resTXT = await fetch(nombreTXT).catch(() => null);
+                        if (resTXT && resTXT.ok) {
+                            const txtData = await resTXT.text();
+                            procesarProgresivasTXT(txtData, nombreTXT);
+                        }
+                    }
+                } catch (e) {
+                    console.warn("Error al cargar primer perfil:", e);
+                }
+
+                // 3. Quitar pantalla de carga: El terreno y el primer corte ya se muestran interactivos en 3D
+                if (loadingScreen) {
+                    loadingScreen.style.opacity = '0';
+                    loadingScreen.style.visibility = 'hidden';
+                    setTimeout(() => loadingScreen.remove(), 500);
+                }
+
+                // 4. Iniciar la proyección 2D del primer perfil de fondo (no bloquea la interacción 3D)
+                if (primerPerfilData) {
+                    activarPerfil2D(primerNombre, primerPerfilData);
+                }
+
+                // 5. Descargar y construir capas restantes de forma asíncrona en background
+                const promesasRestantes = nombresPerfiles.slice(1).map(async (nombre) => {
                     try {
-                        const resPerfil = await fetch(nombre);
-                        if (resPerfil.ok) {
+                        const resPerfil = await fetch(nombre).catch(() => null);
+                        if (resPerfil && resPerfil.ok) {
                             const dataPerfil = await resPerfil.json();
                             construirPerfil(dataPerfil, nombre);
                             
                             const nombreTXT = nombre.replace('Perfil', 'PL').replace('.json', '.txt');
-                            const resTXT = await fetch(nombreTXT);
-                            if (resTXT.ok) {
+                            const resTXT = await fetch(nombreTXT).catch(() => null);
+                            if (resTXT && resTXT.ok) {
                                 const txtData = await resTXT.text();
                                 procesarProgresivasTXT(txtData, nombreTXT);
                             }
-                            return { nombre, data: dataPerfil };
                         }
                     } catch (e) {
-                        console.warn(`Error al cargar preestablecido ${nombre}:`, e);
+                        console.warn(`Error de fondo al cargar ${nombre}:`, e);
                     }
-                    return null;
                 });
 
-                const resultados = await Promise.all(promesasPerfiles);
-                const primerValido = resultados.find(r => r !== null);
-                if (primerValido) {
-                    await activarPerfil2D(primerValido.nombre, primerValido.data);
-                }
+                await Promise.all(promesasRestantes);
+
             } catch (err) {
                 console.error("Error durante la inicialización de datos:", err);
-            } finally {
-                // Cierra la pantalla de carga de manera segura
                 if (loadingScreen) {
                     loadingScreen.style.opacity = '0';
                     loadingScreen.style.visibility = 'hidden';
