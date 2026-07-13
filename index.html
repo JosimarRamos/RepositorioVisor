@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+    <!-- 1. BLOQUEO NATIVO DE ZOOM Y ESCALA EN VIEWPORT -->
     <meta charset="UTF-8">
-    <!-- FASE 2: Bloqueo de zoom nativo a nivel de viewport -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Visor Geofísico Bidimensional / Tridimensional</title>
     <style>
@@ -37,8 +37,8 @@
         
         #canvas-3d { width: 100%; height: 100%; }
         
-        /* FASE 2: Bloqueo de gestos por defecto para evitar zoom global */
-        #canvas-2d { flex-grow: 1; width: 100%; height: 100%; display: block; background-color: #0a0a0a; cursor: grab; outline: none; touch-action: none; }
+        /* 1. BLOQUEO DE GESTOS EN CANVAS 2D */
+        #canvas-2d { flex-grow: 1; width: 100%; height: 100%; display: block; background-color: #0a0a0a; cursor: grab; outline: none; touch-action: none; overscroll-behavior: none; }
         #canvas-2d:active { cursor: grabbing; }
         
         .accordion-item { margin-bottom: 12px; }
@@ -87,9 +87,10 @@
         
         #view-2d-header { background-color: #1a1a1a; border-bottom: 1px solid var(--border-color); padding: 10px 20px; font-size: 13px; font-weight: bold; color: #ccc; display: flex; justify-content: space-between; align-items: center; white-space: nowrap; }
         
-        /* FASE 2: Buscador Simplificado Izquierdo */
+        /* BUSCADOR SIMPLIFICADO */
         .search-prog-container { display: flex; align-items: center; background: #111; border: 1px solid var(--border-color); border-radius: 6px; overflow: hidden; margin-left: 10px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.5); }
-        #search-progressive { background: transparent; border: none; color: var(--accent-color); padding: 5px 10px; font-size: 13px; width: 100px; text-align: center; outline: none; font-family: monospace; font-weight: bold; }
+        #search-progressive { background: transparent; border: none; color: var(--accent-color); padding: 6px 12px; font-size: 13px; width: 80px; text-align: center; outline: none; font-family: monospace; font-weight: bold; -moz-appearance: textfield; transition: color 0.3s; }
+        #search-progressive::-webkit-outer-spin-button, #search-progressive::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
         #search-progressive::placeholder { color: #555; font-family: 'Segoe UI', sans-serif; font-weight: normal; }
 
         .header-title-text { font-size: 13px; font-weight: bold; color: white; }
@@ -103,26 +104,17 @@
         .btn-profile-nav { background: rgba(255, 255, 255, 0.08); border: 1px solid #444; color: var(--text-color); border-radius: 4px; width: 26px; height: 26px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 11px; transition: background 0.2s, color 0.2s; user-select: none; }
         .btn-profile-nav:hover { background: var(--accent-color); color: #000; border-color: var(--accent-color); }
 
-        #tooltip-2d { position: absolute; background: rgba(15, 15, 15, 0.95); border: 1px solid var(--border-color); padding: 8px 12px; border-radius: 6px; pointer-events: none; font-family: 'Segoe UI', sans-serif; display: none; z-index: 100; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        /* NUEVO DISEÑO HUD CENTRAL (Reemplaza a tooltip y láser-info lateral) */
+        #laser-info { position: absolute; bottom: 25px; left: 50%; transform: translateX(-50%); background: rgba(15, 15, 15, 0.90); border: 1px solid #444; padding: 10px 25px; border-radius: 50px; display: none; align-items: center; gap: 25px; z-index: 100; box-shadow: 0 4px 20px rgba(0,0,0,0.6); pointer-events: none; backdrop-filter: blur(5px); }
+        .hud-stat { display: flex; flex-direction: column; align-items: center; }
+        .hud-label { font-size: 9px; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; }
+        .hud-value { font-size: 14px; font-weight: bold; color: #fff; font-family: monospace; }
+        .hud-value.highlight { color: #81c784; font-size: 16px; text-shadow: 0 0 5px rgba(129, 199, 132, 0.3); }
+        .hud-divider { width: 1px; height: 25px; background: #333; }
 
-        #laser-info { position: absolute; bottom: 25px; right: 25px; background: rgba(20, 20, 20, 0.95); border: 1px solid var(--border-color); padding: 12px 15px; border-radius: 8px; display: none; font-size: 13px; line-height: 1.4; z-index: 100; box-shadow: 0 4px 20px rgba(0,0,0,0.5); pointer-events: none; max-width: 240px; }
-        #laser-info span.val { color: #81c784; font-weight: bold; }
-
-        #dpad-container { position: absolute; bottom: 25px; left: 25px; display: none; flex-direction: column; align-items: center; gap: 4px; background: rgba(15, 15, 15, 0.85); padding: 12px; border-radius: 50px; border: 1px solid #444; z-index: 100; user-select: none; box-shadow: 0 4px 15px rgba(0,0,0,0.5); backdrop-filter: blur(5px); }
-        .dpad-row { display: flex; gap: 4px; }
-        .dpad-btn { width: 34px; height: 34px; border-radius: 50%; background: #252525; color: var(--text-color); border: 1px solid #555; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; transition: all 0.1s; }
-        .dpad-btn:hover { background: var(--accent-color); border-color: var(--accent-color); color: #fff; }
-        .dpad-btn:active { transform: scale(0.9); }
-        #btn-center { font-size: 16px; background: #1a1a1a; color: var(--danger-color); }
-        #btn-center:hover { background: var(--danger-color); color: white; border-color: var(--danger-color); }
-        
         #zoom-controls-2d { position: absolute; top: 60px; right: 20px; display: flex; flex-direction: column; gap: 8px; z-index: 101; }
         .zoom-btn { width: 36px; height: 36px; border-radius: 6px; background: rgba(20, 20, 20, 0.85); color: var(--text-color); border: 1px solid var(--border-color); font-size: 16px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s, color 0.2s; backdrop-filter: blur(4px); user-select: none; }
         .zoom-btn:hover { background: var(--accent-color); color: #000; border-color: var(--accent-color); }
-        
-        /* Botón de Restaurar Vista Destacado */
-        #btn-zoom-reset { background: rgba(255, 183, 77, 0.15); color: #ffb74d; border-color: #ffb74d; font-size: 18px; }
-        #btn-zoom-reset:hover { background: #ffb74d; color: #000; border-color: #ffb74d; }
 
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
@@ -146,16 +138,17 @@
             #main-wrapper.is-2d-collapsed #btn-toggle-2d { transform: rotate(180deg); }
             
             #view-2d-header { padding: 10px 8px; font-size: 11px; }
-            .header-title-text { display: none; } 
+            .header-title-text { display: none; }
             .search-prog-container { margin-left: 0; }
-            #search-progressive { width: 70px; font-size: 11px; }
+            #search-progressive { width: 70px; font-size: 12px; }
             
             #active-profile-title { max-width: 80px; overflow: hidden; text-overflow: ellipsis; }
             
-            /* D-Pad visible en móvil para micro-ajustes */
-            #dpad-container { display: flex; transform: scale(0.85); transform-origin: bottom left; bottom: 15px; left: 15px; padding: 8px; }
-            
-            #laser-info { bottom: 25px; right: 15px; padding: 10px 12px; font-size: 11px; max-width: 150px; box-shadow: 0 4px 15px rgba(0,0,0,0.6); border-radius: 6px; }
+            /* Ajuste HUD móvil */
+            #laser-info { gap: 15px; padding: 8px 20px; border-radius: 30px; bottom: 15px; }
+            .hud-label { font-size: 8px; }
+            .hud-value { font-size: 12px; }
+            .hud-value.highlight { font-size: 14px; }
         }
     </style>
     <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
@@ -256,9 +249,8 @@
                         <button id="btn-toggle-2d" title="Ocultar/Mostrar panel 2D">▼</button>
                         <span class="header-title-text" style="margin-left:8px;">2D</span>
                         
-                        <!-- FASE 2: Buscador Simplificado -->
                         <div class="search-prog-container">
-                            <input type="number" id="search-progressive" placeholder="🔍 Prog. (m)" title="Ingresar Progresiva Exacta y dar Enter para fijar">
+                            <input type="number" id="search-progressive" placeholder="Progresiva" title="Ingresar Progresiva y presionar Enter">
                         </div>
                     </div>
 
@@ -272,21 +264,27 @@
                 <div id="zoom-controls-2d">
                     <button class="zoom-btn" id="btn-zoom-in" title="Acercar">+</button>
                     <button class="zoom-btn" id="btn-zoom-out" title="Alejar">-</button>
-                    <button class="zoom-btn" id="btn-zoom-reset" title="Restaurar vista original (Ajustar)">⟲</button>
+                    <button class="zoom-btn" id="btn-zoom-reset" title="Restaurar escala">R</button>
                 </div>
 
                 <canvas id="canvas-2d" tabindex="0"></canvas>
-                <div id="tooltip-2d"></div>
-                <div id="laser-info"></div>
                 
-                <div id="dpad-container">
-                    <div class="dpad-row"><button class="dpad-btn" id="btn-up">▲</button></div>
-                    <div class="dpad-row">
-                        <button class="dpad-btn" id="btn-left">◀</button>
-                        <button class="dpad-btn" id="btn-center" title="Fijar Punto (Enter)">🎯</button>
-                        <button class="dpad-btn" id="btn-right">▶</button>
+                <!-- HUD CENTRAL NUEVO -->
+                <div id="laser-info">
+                    <div class="hud-stat">
+                        <span class="hud-label">Sondeo (S)</span>
+                        <span class="hud-value" id="hud-s">0.0 m</span>
                     </div>
-                    <div class="dpad-row"><button class="dpad-btn" id="btn-down">▼</button></div>
+                    <div class="hud-divider"></div>
+                    <div class="hud-stat">
+                        <span class="hud-label">Elevación (Z)</span>
+                        <span class="hud-value" id="hud-z">0.0 m</span>
+                    </div>
+                    <div class="hud-divider"></div>
+                    <div class="hud-stat">
+                        <span class="hud-label">Prof. Terreno</span>
+                        <span class="hud-value highlight" id="hud-prof">N/A</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -322,16 +320,11 @@
         let centerOffset = null; 
         let activeProfileName = null; 
 
-        let canvas2D, ctx2D, tooltip2D;
+        let canvas2D, ctx2D;
         let dataProyeccion2D = null; 
         let isProcessing2D = false;
         let currentRenderId = 0; 
-        let clickedPoint2D = null; 
         let laserMesh = null; 
-
-        let cursorX = -1000, cursorY = -1000;
-        let cursorMundoS = 0, cursorMundoZ = 0;
-        let isCursorActive = false;
         
         let snapS = null; 
 
@@ -353,7 +346,6 @@
             const container = document.getElementById('canvas-3d');
             canvas2D = document.getElementById('canvas-2d');
             ctx2D = canvas2D.getContext('2d', { alpha: false });
-            tooltip2D = document.getElementById('tooltip-2d');
 
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x0a0a0a);
@@ -641,45 +633,81 @@
             return spine;
         }
 
-        // FASE 2: Centrado y Alineación Vertical Inteligente al cambiar a progresiva fija
+        function toggle2DPanel() {
+            document.getElementById('main-wrapper').classList.toggle('is-2d-collapsed');
+            setTimeout(onWindowResize, 310);
+        }
+
+        function cambiarPerfilSiguiente(direccion) {
+            const nombres = Object.keys(perfilesRawData);
+            if (nombres.length === 0) return;
+            let idx = nombres.indexOf(activeProfileName);
+            if (idx === -1) {
+                idx = 0;
+            } else {
+                idx = (idx + direccion + nombres.length) % nombres.length;
+            }
+            const nuevoNombre = nombres[idx];
+            if (nuevoNombre && perfilesRawData[nuevoNombre]) {
+                activarPerfil2D(nuevoNombre, perfilesRawData[nuevoNombre]);
+            }
+        }
+
+        // LÓGICA DE CENTRADO (MIRA FIJA)
         function centrarVistaEnProgresiva(S) {
             if (!dataProyeccion2D) return;
             const logicalW = canvas2D.width / dpr;
-            const logicalH = canvas2D.height / dpr;
             const paddingLeft = 60;
             const paddingRight = 60;
-            const paddingTop = 40;
-            const paddingBottom = 60;
+            const w_canvas = logicalW - (paddingLeft + paddingRight);
+            
+            // Forzamos el panX para que S quede exactamente en la mitad de la pantalla
+            panX = (logicalW / 2) - paddingLeft - (w_canvas - dataProyeccion2D.longitud * escalaGlobal) / 2 - (S - dataProyeccion2D.minS) * escalaGlobal;
+            
+            reconstruirCacheScreen();
+            actualizarHUDCentral();
+        }
+        
+        // ZOOM INTELIGENTE QUE RESPETA EL CENTRO DE LA PANTALLA
+        function aplicarZoomCentrado(nuevoZoom) {
+            if (!dataProyeccion2D) return;
+            const logicalW = canvas2D.width / dpr;
+            const logicalH = canvas2D.height / dpr;
+            const cx = logicalW / 2;
+            const cy = logicalH / 2;
+
+            // 1. Guardar qué coordenadas de mundo están actualmente en el centro de la cruz
+            const sCentro = dataProyeccion2D.minS + (cx - transX) / escalaGlobal;
+            const zCentro = dataProyeccion2D.minZ_grid + (transY - cy) / escalaGlobal;
+
+            // 2. Cambiar zoom
+            zoom2D = nuevoZoom;
+
+            // 3. Pre-calcular nueva escala global sin afectar el render aún
+            const paddingLeft = 60, paddingRight = 60, paddingTop = 40;
+            const paddingBottom = window.innerWidth <= 768 ? 120 : 60;
             const w_canvas = logicalW - (paddingLeft + paddingRight);
             const h_canvas = logicalH - (paddingTop + paddingBottom);
-
+            
             const rngS = Math.max(dataProyeccion2D.maxS - dataProyeccion2D.minS, 1);
             const rngZ = Math.max(dataProyeccion2D.maxZ_grid - dataProyeccion2D.minZ_grid, 1);
-            
-            // Re-calculo de escala global momentánea
-            escalaGlobal = Math.min(w_canvas / rngS, h_canvas / rngZ) * zoom2D;
+            const baseEscala = Math.min(w_canvas / rngS, h_canvas / rngZ);
+            const nuevaEscalaGlobal = baseEscala * zoom2D;
 
-            // Alineación Horizontal (X): Fijar progresiva al centro de la mira
-            panX = (logicalW / 2) - paddingLeft - (w_canvas - rngS * escalaGlobal) / 2 - (S - dataProyeccion2D.minS) * escalaGlobal;
+            const nuevaBaseX = paddingLeft + (w_canvas - rngS * nuevaEscalaGlobal) / 2;
+            const nuevaBaseY = paddingTop + (h_canvas + rngZ * nuevaEscalaGlobal) / 2;
 
-            // Alineación Vertical (Y): Al último punto seleccionado si existe, sino al centro
-            if (clickedPoint2D) {
-                const targetY = logicalH / 2;
-                const baseTransY = paddingTop + (h_canvas + rngZ * escalaGlobal) / 2;
-                const zOffset = (clickedPoint2D.z - dataProyeccion2D.minZ_grid) * escalaGlobal;
-                panY = targetY + zOffset - baseTransY;
-            } else {
-                panY = 0; // Centrado por defecto en altura media
+            // 4. Ajustar panX y panY para que ese mismo sCentro y zCentro sigan en cx, cy
+            panX = cx - nuevaBaseX - (sCentro - dataProyeccion2D.minS) * nuevaEscalaGlobal;
+            panY = cy - nuevaBaseY + (zCentro - dataProyeccion2D.minZ_grid) * nuevaEscalaGlobal;
+
+            // Si hay un bloqueo activo, forzamos la corrección estricta al snapS
+            if (snapS !== null) {
+                panX = cx - nuevaBaseX - (snapS - dataProyeccion2D.minS) * nuevaEscalaGlobal;
             }
 
             reconstruirCacheScreen();
-            
-            // Mira Central Fija se activa
-            cursorX = logicalW / 2;
-            cursorY = logicalH / 2;
-            isCursorActive = true;
-            updateCursor2D();
-            triggerCursorClick();
+            actualizarHUDCentral();
         }
 
         function vincularEventosUI() {
@@ -701,33 +729,32 @@
             bindEvent('btn-prev-profile', 'click', () => cambiarPerfilSiguiente(-1));
             bindEvent('btn-next-profile', 'click', () => cambiarPerfilSiguiente(1));
 
-            // FASE 2: Buscador Simplificado de Progresivas
+            // BUSCADOR Y BLOQUEO DE EJE X (SNAP)
             const searchInput = document.getElementById('search-progressive');
+
             searchInput.addEventListener('input', (e) => {
                 if (!dataProyeccion2D) return;
                 const val = parseFloat(e.target.value);
                 if (!isNaN(val) && val >= dataProyeccion2D.minS && val <= dataProyeccion2D.maxS) {
                     snapS = val;
-                    isCursorActive = true;
                     searchInput.style.color = "var(--accent-color)";
-                    updateCursor2D();
+                    centrarVistaEnProgresiva(snapS);
                 } else {
                     snapS = null;
-                    searchInput.style.color = "var(--danger-color)";
-                    if (e.target.value === '') searchInput.style.color = "var(--accent-color)";
-                    dibu2D();
+                    searchInput.style.color = e.target.value === '' ? "var(--accent-color)" : "var(--danger-color)";
+                    actualizarHUDCentral();
                 }
             });
 
             searchInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape') {
-                    searchInput.value = '';
-                    snapS = null;
+                if (e.key === 'Escape' || e.key === 'Enter') {
                     searchInput.blur();
-                    searchInput.style.color = "var(--accent-color)";
-                    dibu2D();
-                } else if (e.key === 'Enter' && snapS !== null) {
-                    centrarVistaEnProgresiva(snapS);
+                    if(e.key === 'Escape') {
+                        searchInput.value = '';
+                        snapS = null;
+                        searchInput.style.color = "var(--accent-color)";
+                        actualizarHUDCentral();
+                    }
                 }
             });
 
@@ -799,41 +826,18 @@
             
             const factorBoton = window.innerWidth <= 768 ? 1.2 : 1.3;
 
-            bindEvent('btn-zoom-in', 'click', () => {
-                zoom2D = Math.min(30, zoom2D * factorBoton);
-                reconstruirCacheScreen();
-                if (isCursorActive) updateCursor2D();
-            });
-            bindEvent('btn-zoom-out', 'click', () => {
-                zoom2D = Math.max(0.5, zoom2D / factorBoton);
-                reconstruirCacheScreen();
-                if (isCursorActive) updateCursor2D();
-            });
-            
-            // FASE 2: Botón Ajustar/Restaurar Vista Original
+            bindEvent('btn-zoom-in', 'click', () => aplicarZoomCentrado(Math.min(30, zoom2D * factorBoton)));
+            bindEvent('btn-zoom-out', 'click', () => aplicarZoomCentrado(Math.max(0.5, zoom2D / factorBoton)));
             bindEvent('btn-zoom-reset', 'click', () => {
-                zoom2D = 1.0;
-                panX = 0;
-                panY = 0;
-                snapS = null;
-                clickedPoint2D = null;
+                zoom2D = 1.0; panX = 0; panY = 0; snapS = null; 
                 document.getElementById('search-progressive').value = '';
-                reconstruirCacheScreen();
-                
-                const logicalW = canvas2D.width / dpr;
-                const logicalH = canvas2D.height / dpr;
-                cursorX = logicalW / 2;
-                cursorY = logicalH / 2;
-                isCursorActive = true;
-                updateCursor2D();
-                triggerCursorClick();
+                reconstruirCacheScreen(); actualizarHUDCentral();
             });
             
             if (canvas2D) {
                 let isDragging2D = false;
                 let startDragX = 0, startDragY = 0;
                 let originalPanX = 0, originalPanY = 0;
-                let dragMoved = false;
                 let touchStartDist = 0;
                 let isPinchZooming = false;
 
@@ -841,9 +845,7 @@
                     if (!dataProyeccion2D) return;
                     e.preventDefault();
                     const zoomFactor = e.deltaY < 0 ? 1.15 : 0.85;
-                    zoom2D = Math.max(0.5, Math.min(30, zoom2D * zoomFactor));
-                    reconstruirCacheScreen();
-                    if (isCursorActive) updateCursor2D();
+                    aplicarZoomCentrado(Math.max(0.5, Math.min(30, zoom2D * zoomFactor)));
                 }, { passive: false });
 
                 canvas2D.addEventListener('mousedown', (e) => {
@@ -854,54 +856,31 @@
                     startDragY = e.clientY - rect.top;
                     originalPanX = panX;
                     originalPanY = panY;
-                    dragMoved = false;
                 });
 
                 canvas2D.addEventListener('mousemove', (e) => {
-                    if (!dataProyeccion2D) return;
+                    if (!dataProyeccion2D || !isDragging2D) return;
                     const rect = canvas2D.getBoundingClientRect();
                     const curX = e.clientX - rect.left;
                     const curY = e.clientY - rect.top;
 
-                    // FASE 2: El paneo desplaza la imagen bajo la mira central fija
-                    if (isDragging2D) {
-                        const dx = curX - startDragX;
-                        const dy = curY - startDragY;
-                        if (Math.hypot(dx, dy) > 4) {
-                            dragMoved = true;
-                            if (snapS !== null) {
-                                panY = originalPanY + dy; // Bloquear X en modo snap
-                            } else {
-                                panX = originalPanX + dx;
-                                panY = originalPanY + dy;
-                            }
-                            reconstruirCacheScreen();
-                            
-                            // Forzar mira al centro del canvas lógico
-                            const logicalW = canvas2D.width / dpr;
-                            const logicalH = canvas2D.height / dpr;
-                            cursorX = logicalW / 2;
-                            cursorY = logicalH / 2;
-                            isCursorActive = true;
-                            updateCursor2D();
-                            triggerCursorClick(); // Actualizar 3D en tiempo real
-                        }
-                    }
+                    const dx = curX - startDragX;
+                    const dy = curY - startDragY;
+
+                    // Si hay snapS activo, ignoramos el paneo horizontal (dx)
+                    if (snapS === null) panX = originalPanX + dx;
+                    panY = originalPanY + dy;
+                    
+                    reconstruirCacheScreen();
+                    actualizarHUDCentral();
                 });
 
-                canvas2D.addEventListener('mouseup', (e) => {
-                    if (isDragging2D) isDragging2D = false;
-                });
-
-                canvas2D.addEventListener('mouseleave', () => { 
-                    isDragging2D = false;
-                });
+                window.addEventListener('mouseup', () => { isDragging2D = false; });
 
                 canvas2D.addEventListener('touchstart', (e) => {
                     if (!dataProyeccion2D) return;
                     const rect = canvas2D.getBoundingClientRect();
                     isDragging2D = true;
-                    dragMoved = false;
 
                     if (e.touches.length === 1) {
                         isPinchZooming = false;
@@ -909,135 +888,48 @@
                         startDragY = e.touches[0].clientY - rect.top;
                         originalPanX = panX;
                         originalPanY = panY;
-                        
-                        // Forzar mira al centro lógicos
-                        const logicalW = canvas2D.width / dpr;
-                        const logicalH = canvas2D.height / dpr;
-                        cursorX = logicalW / 2; cursorY = logicalH / 2;
-                        isCursorActive = true; updateCursor2D();
                     } else if (e.touches.length === 2) {
                         isPinchZooming = true;
                         const dx = e.touches[0].clientX - e.touches[1].clientX;
                         const dy = e.touches[0].clientY - e.touches[1].clientY;
                         touchStartDist = Math.hypot(dx, dy);
                     }
-                }, { passive: true });
+                }, { passive: false });
 
                 canvas2D.addEventListener('touchmove', (e) => {
                     if (!dataProyeccion2D) return;
+                    e.preventDefault(); // EVITA el scroll nativo 100%
                     const rect = canvas2D.getBoundingClientRect();
 
                     if (isPinchZooming && e.touches.length === 2) {
-                        e.preventDefault();
                         const dx = e.touches[0].clientX - e.touches[1].clientX;
                         const dy = e.touches[0].clientY - e.touches[1].clientY;
                         const currentDist = Math.hypot(dx, dy);
                         if (touchStartDist > 0) {
                             const factor = currentDist / touchStartDist;
-                            const dampFactor = 1 + (factor - 1) * 0.65; 
-                            zoom2D = Math.max(0.5, Math.min(30, zoom2D * dampFactor));
+                            const dampFactor = 1 + (factor - 1) * 0.4; 
+                            aplicarZoomCentrado(Math.max(0.5, Math.min(30, zoom2D * dampFactor)));
                             touchStartDist = currentDist;
-                            reconstruirCacheScreen();
-                            
-                            const logicalW = canvas2D.width / dpr;
-                            const logicalH = canvas2D.height / dpr;
-                            cursorX = logicalW / 2; cursorY = logicalH / 2;
-                            isCursorActive = true; updateCursor2D();
-                            triggerCursorClick();
                         }
                     } else if (isDragging2D && e.touches.length === 1) {
-                        e.preventDefault();
                         const curX = e.touches[0].clientX - rect.left;
                         const curY = e.touches[0].clientY - rect.top;
                         const dx = curX - startDragX;
                         const dy = curY - startDragY;
 
-                        if (Math.hypot(dx, dy) > 5) {
-                            dragMoved = true;
-                            if (snapS !== null) {
-                                panY = originalPanY + dy;
-                            } else {
-                                panX = originalPanX + dx;
-                                panY = originalPanY + dy;
-                            }
-                            reconstruirCacheScreen();
-                            
-                            const logicalW = canvas2D.width / dpr;
-                            const logicalH = canvas2D.height / dpr;
-                            cursorX = logicalW / 2; cursorY = logicalH / 2;
-                            isCursorActive = true; updateCursor2D();
-                            triggerCursorClick();
-                        }
+                        if (snapS === null) panX = originalPanX + dx;
+                        panY = originalPanY + dy;
+                        
+                        reconstruirCacheScreen();
+                        actualizarHUDCentral();
                     }
                 }, { passive: false });
 
-                canvas2D.addEventListener('touchend', (e) => {
-                    if (isDragging2D) {
-                        isDragging2D = false;
-                        isPinchZooming = false;
-                    }
-                });
-
-                window.addEventListener('keydown', (e) => {
-                    if (!dataProyeccion2D || isProcessing2D || !isCursorActive) return;
-                    if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
-
-                    let step = e.shiftKey ? 10 : 2;
-                    let moved = false;
-                    
-                    // Flechas ahora mueven el perfil geofísico por debajo de la mira fija
-                    switch (e.key) {
-                        case 'ArrowLeft': if (snapS === null) { panX += step; moved = true; } break;
-                        case 'ArrowRight': if (snapS === null) { panX -= step; moved = true; } break;
-                        case 'ArrowUp': panY += step; moved = true; break;
-                        case 'ArrowDown': panY -= step; moved = true; break;
-                    }
-                    if (moved) {
-                        reconstruirCacheScreen();
-                        const logicalW = canvas2D.width / dpr;
-                        const logicalH = canvas2D.height / dpr;
-                        cursorX = logicalW / 2;
-                        cursorY = logicalH / 2;
-                        isCursorActive = true;
-                        updateCursor2D(); e.preventDefault();
-                        triggerCursorClick();
-                    }
+                window.addEventListener('touchend', (e) => {
+                    if (e.touches.length < 2) isPinchZooming = false;
+                    if (e.touches.length === 0) isDragging2D = false;
                 });
             }
-
-            let dpadInterval;
-            const startMove = (dx, dy) => {
-                const move = () => { 
-                    if (snapS !== null && dx !== 0) return; // Bloquear X en snap
-                    panX += dx; 
-                    panY += dy; 
-                    reconstruirCacheScreen();
-                    
-                    const logicalW = canvas2D.width / dpr;
-                    const logicalH = canvas2D.height / dpr;
-                    cursorX = logicalW / 2; cursorY = logicalH / 2;
-                    isCursorActive = true; updateCursor2D();
-                    triggerCursorClick();
-                };
-                move();
-                dpadInterval = setInterval(move, 50);
-            };
-            const stopMove = () => clearInterval(dpadInterval);
-            const bindDpad = (id, dx, dy) => {
-                const el = document.getElementById(id);
-                el.addEventListener('mousedown', () => startMove(dx, dy));
-                el.addEventListener('mouseup', stopMove);
-                el.addEventListener('mouseleave', stopMove);
-                
-                el.addEventListener('touchstart', (e) => { e.preventDefault(); startMove(dx, dy); }, {passive: false});
-                el.addEventListener('touchend', stopMove);
-            };
-            bindDpad('btn-up', 0, 3); bindDpad('btn-down', 0, -3);
-            bindDpad('btn-left', 3, 0); bindDpad('btn-right', -3, 0);
-            
-            const btnCenter = document.getElementById('btn-center');
-            btnCenter.addEventListener('mousedown', triggerCursorClick);
-            btnCenter.addEventListener('touchstart', (e) => { e.preventDefault(); triggerCursorClick(); }, {passive: false});
         }
 
         function animate() { requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); }
@@ -1068,6 +960,7 @@
             if (logicalH > 0) {
                 if (!isProcessing2D && dataProyeccion2D) {
                     reconstruirCacheScreen(); 
+                    actualizarHUDCentral();
                 } else if (!dataProyeccion2D) {
                     ctx2D.fillStyle = '#0a0a0a';
                     ctx2D.fillRect(0, 0, canvas2D.width, canvas2D.height);
@@ -1272,6 +1165,197 @@
             actualizarEstadoVinculoTXT(); 
         }
 
+        async function activarPerfil2D(nombre, data) {
+            if (isProcessing2D) return; 
+            
+            document.getElementById('main-wrapper').classList.remove('is-2d-collapsed');
+            setTimeout(onWindowResize, 310);
+
+            isProcessing2D = true;
+            currentRenderId++;
+            const myRenderId = currentRenderId;
+
+            activeProfileName = nombre;
+            
+            snapS = null;
+            const searchInput = document.getElementById('search-progressive');
+            if (searchInput) {
+                searchInput.value = '';
+                searchInput.style.color = "var(--accent-color)";
+            }
+            
+            zoom2D = 1.0;
+            panX = 0;
+            panY = 0;
+
+            const titleEl = document.getElementById('active-profile-title');
+            titleEl.innerText = `[ Calculando... ]`;
+            titleEl.style.color = "#ffb74d"; 
+
+            const safeId = nombre.replace(/[^a-zA-Z0-9]/g, '_');
+            document.querySelectorAll('.layer-item').forEach(el => el.classList.remove('active-2d'));
+            const capDiv = document.getElementById(`capa-${safeId}`);
+            if(capDiv) capDiv.classList.add('active-2d');
+
+            laserMesh.visible = false;
+            document.getElementById('laser-info').style.display = 'none';
+
+            await new Promise(r => setTimeout(r, 20));
+
+            let minZ = Infinity, maxZ = -Infinity;
+            let countVertices = 0;
+
+            data.forEach(capa => {
+                for (let i = 0; i < capa.vertices.length; i += 3) {
+                    let vz = capa.vertices[i+2];
+                    if (Number.isFinite(vz)) {
+                        if (vz < minZ) minZ = vz;
+                        if (vz > maxZ) maxZ = vz;
+                        countVertices++;
+                    }
+                }
+            });
+
+            if (countVertices === 0) { isProcessing2D = false; return; }
+
+            let txtName = nombre.replace('Perfil', 'PL').replace('.json', '.txt');
+            let altName = nombre.replace('.json', '.txt');
+            let txtData = progresivasCargadas[txtName] || progresivasCargadas[altName];
+            
+            let poliLineaActiva = txtData || crearSpineFallback(data);
+            
+            const optSegments = [];
+            if (poliLineaActiva && poliLineaActiva.length > 1) {
+                for (let i = 0; i < poliLineaActiva.length - 1; i++) {
+                    let p1 = poliLineaActiva[i];
+                    let p2 = poliLineaActiva[i+1];
+                    let dx = p2.x - p1.x;
+                    let dy = p2.y - p1.y;
+                    let l2 = dx*dx + dy*dy;
+                    optSegments.push({ p1, p2, dx, dy, l2 });
+                }
+            }
+
+            let globalMinS = Infinity, globalMaxS = -Infinity;
+            const estratosProyectados = [];
+            
+            let verticesProcesados = 0;
+
+            for (let c = 0; c < data.length; c++) {
+                let capa = data[c];
+                const vertices2D = [];
+                
+                for (let i = 0; i < capa.vertices.length; i += 3) {
+                    if (verticesProcesados > 0 && verticesProcesados % 15000 === 0) {
+                        await new Promise(r => setTimeout(r, 0));
+                        if (myRenderId !== currentRenderId) return; 
+                    }
+                    verticesProcesados++;
+
+                    let vx = capa.vertices[i], vy = capa.vertices[i+1], vz = capa.vertices[i+2];
+                    if (Number.isFinite(vx)) {
+                        let s = proyectarXYEnSegmentosPrecalculados(vx, vy, optSegments);
+                        
+                        if (s < globalMinS) globalMinS = s;
+                        if (s > globalMaxS) globalMaxS = s;
+                        vertices2D.push({ s: s, z: vz });
+                    } else {
+                        vertices2D.push({ s: 0, z: 0 }); 
+                    }
+                }
+                estratosProyectados.push({ color: capa.color, caras: capa.caras, vertices: vertices2D });
+            }
+
+            if (txtData && txtData.length > 0) {
+                globalMinS = txtData[0].s;
+                globalMaxS = txtData[txtData.length - 1].s;
+            }
+
+            const rangeS = globalMaxS - globalMinS || 1;
+            laserMesh.scale.setScalar(Math.max(rangeS * 0.015, 14)); 
+
+            minZ_grid = Math.floor(minZ / 50) * 50;
+            const maxZ_grid = Math.ceil(maxZ / 50) * 50;
+
+            dataProyeccion2D = { 
+                estratos: estratosProyectados, 
+                longitud: rangeS, 
+                minS: globalMinS, 
+                maxS: globalMaxS, 
+                minZ: minZ, 
+                maxZ: maxZ, 
+                minZ_grid: minZ_grid, 
+                maxZ_grid: maxZ_grid,
+                spineFallback: !txtData ? poliLineaActiva : null 
+            };
+            
+            await generarRawMeshAsync(myRenderId);
+
+            if (myRenderId === currentRenderId) {
+                titleEl.innerText = nombre.replace(".json", "");
+                titleEl.style.color = "var(--accent-color)";
+                isProcessing2D = false;
+                
+                // Centrar inicialmente el perfil en la pantalla
+                centrarVistaEnProgresiva(globalMinS + (globalMaxS - globalMinS)/2);
+            }
+        }
+
+        async function generarRawMeshAsync(renderId) {
+            const rngS = Math.max(dataProyeccion2D.maxS - dataProyeccion2D.minS, 1);
+            const rngZ = Math.max(dataProyeccion2D.maxZ_grid - dataProyeccion2D.minZ_grid, 1);
+
+            rawMeshCanvas.width = 8192; 
+            escalaRaw = rawMeshCanvas.width / rngS;
+            rawMeshCanvas.height = Math.max(1, rngZ * escalaRaw);
+            
+            ctxRaw.clearRect(0, 0, rawMeshCanvas.width, rawMeshCanvas.height);
+            
+            let totalCaras = 0, carasProcesadas = 0;
+            dataProyeccion2D.estratos.forEach(c => totalCaras += c.caras.length / 3);
+            const titleEl = document.getElementById('active-profile-title');
+
+            const CHUNK_FACES = 10000; 
+
+            for (let capa of dataProyeccion2D.estratos) {
+                if (renderId !== currentRenderId) return; 
+
+                ctxRaw.fillStyle = capa.color;
+                ctxRaw.strokeStyle = capa.color; 
+                ctxRaw.lineWidth = 0.5;
+
+                for (let i = 0; i < capa.caras.length; i += CHUNK_FACES * 3) {
+                    ctxRaw.beginPath(); 
+                    
+                    let limit = Math.min(i + CHUNK_FACES * 3, capa.caras.length);
+                    for (let j = i; j < limit; j += 3) {
+                        const v0 = capa.vertices[capa.caras[j]];
+                        const v1 = capa.vertices[capa.caras[j+1]];
+                        const v2 = capa.vertices[capa.caras[j+2]];
+                        if (!v0 || !v1 || !v2) continue;
+
+                        let x0 = (v0.s - dataProyeccion2D.minS) * escalaRaw;
+                        let y0 = rawMeshCanvas.height - (v0.z - dataProyeccion2D.minZ_grid) * escalaRaw;
+                        let x1 = (v1.s - dataProyeccion2D.minS) * escalaRaw;
+                        let y1 = rawMeshCanvas.height - (v1.z - dataProyeccion2D.minZ_grid) * escalaRaw;
+                        let x2 = (v2.s - dataProyeccion2D.minS) * escalaRaw;
+                        let y2 = rawMeshCanvas.height - (v2.z - dataProyeccion2D.minZ_grid) * escalaRaw;
+
+                        ctxRaw.moveTo(x0, y0); ctxRaw.lineTo(x1, y1); ctxRaw.lineTo(x2, y2); ctxRaw.lineTo(x0, y0); 
+                    }
+                    ctxRaw.fill(); ctxRaw.stroke();
+
+                    carasProcesadas += (limit - i) / 3;
+                    reconstruirCacheScreen(); 
+                    titleEl.innerText = `Renderizando [ ${Math.round((carasProcesadas / totalCaras) * 100)}% ]...`;
+                    
+                    await new Promise(resolve => requestAnimationFrame(resolve));
+                    if (renderId !== currentRenderId) return;
+                }
+            }
+            reconstruirCacheScreen(); 
+        }
+
         function reconstruirCacheScreen() {
             if (!dataProyeccion2D || !canvas2D) return;
             
@@ -1291,7 +1375,7 @@
             const paddingLeft = 60;
             const paddingRight = 60;
             const paddingTop = 40;
-            const paddingBottom = 60;
+            const paddingBottom = isMobile ? 120 : 60;
 
             const w_canvas = logicalW - (paddingLeft + paddingRight);
             const h_canvas = logicalH - (paddingTop + paddingBottom);
@@ -1307,85 +1391,39 @@
             transX = paddingLeft + (w_canvas - rngS * escalaGlobal) / 2 + panX;
             transY = paddingTop + (h_canvas + rngZ * escalaGlobal) / 2 + panY; 
 
-            // FASE 2: CÁLCULO DE PASOS Y MARCADORES DINÁMICOS
-            const spanS = w_canvas / escalaGlobal;
-            const spanZ = h_canvas / escalaGlobal;
-
-            // Buscamos tener aproximadamente entre 6 y 10 líneas en pantalla
-            const targetStepS = spanS / 8;
-            const targetStepZ = spanZ / 6;
-
-            const niceStepsS = [10000, 5000, 2000, 1000, 500, 200, 100, 50, 20, 10];
-            let pasoS = 10;
-            for (let step of niceStepsS) {
-                if (targetStepS >= step) { pasoS = step; break; }
-            }
-            pasoS = Math.max(10, pasoS); // Límite mínimo de 10m en progresiva
-
-            const niceStepsZ = [10000, 5000, 2000, 1000, 500, 200, 100, 50, 20, 10, 5];
-            let pasoZ = 5;
-            for (let step of niceStepsZ) {
-                if (targetStepZ >= step) { pasoZ = step; break; }
-            }
-            pasoZ = Math.max(5, pasoZ); // Límite mínimo de 5m en elevación
-
-            // Definimos el Viewport de visualización
-            const vpLeft = paddingLeft;
-            const vpRight = logicalW - paddingRight;
-            const vpTop = paddingTop;
-            const vpBottom = logicalH - paddingBottom;
-
-            // Dibujar grilla de fondo (sólo líneas)
-            ctxCache.strokeStyle = "rgba(255, 255, 255, 0.08)";
-            ctxCache.lineWidth = 1;
-
-            // 1. Grilla Horizontal (Elevación Z) y Etiquetas Estáticas en el Margen Izquierdo (Sticky)
+            ctxCache.strokeStyle = "rgba(255, 255, 255, 0.1)";
             ctxCache.fillStyle = "#888888"; 
             ctxCache.font = "11px 'Segoe UI', Tahoma, sans-serif";
-            ctxCache.textAlign = "right";
-            ctxCache.textBaseline = "middle";
+            
+            let pasoS = rngS > 1000000 ? 100000 : rngS > 100000 ? 10000 : rngS > 20000 ? 2000 : rngS > 5000 ? 500 : rngS > 1000 ? 100 : 50;
+            let pasoZ = rngZ > 1000000 ? 100000 : rngZ > 100000 ? 10000 : rngZ > 20000 ? 2000 : rngZ > 5000 ? 500 : rngZ > 1000 ? 100 : 50;
 
-            let startZ = Math.floor(dataProyeccion2D.minZ_grid / pasoZ) * pasoZ;
-            for (let z = startZ; z <= dataProyeccion2D.maxZ_grid; z += pasoZ) {
+            for (let z = dataProyeccion2D.minZ_grid; z <= dataProyeccion2D.maxZ_grid; z += pasoZ) {
                 let y = transY - (z - dataProyeccion2D.minZ_grid) * escalaGlobal;
-                if (y >= vpTop && y <= vpBottom) {
-                    ctxCache.beginPath(); ctxCache.moveTo(vpLeft, y); ctxCache.lineTo(vpRight, y); ctxCache.stroke();
-                    ctxCache.fillText(`${z}m`, vpLeft - 8, y + 1); // Pegado fijamente al margen
-                }
+                ctxCache.beginPath(); ctxCache.moveTo(transX, y); ctxCache.lineTo(transX + rngS * escalaGlobal, y); ctxCache.stroke();
+                ctxCache.fillText(`${z}m`, transX - 50, y + 4);
             }
-
-            // 2. Grilla Vertical (Progresiva S) y Etiquetas Estáticas en el Margen Inferior (Sticky)
+            
             let startS = Math.floor(dataProyeccion2D.minS / pasoS) * pasoS;
             for (let s = startS; s <= dataProyeccion2D.maxS; s += pasoS) {
                 let x = transX + (s - dataProyeccion2D.minS) * escalaGlobal;
-                if (x >= vpLeft && x <= vpRight) {
-                    ctxCache.beginPath(); ctxCache.moveTo(x, vpTop); ctxCache.lineTo(x, vpBottom); ctxCache.stroke();
-                    
-                    ctxCache.save();
-                    ctxCache.translate(x, vpBottom + 12);
-                    ctxCache.rotate(-Math.PI / 4); 
-                    ctxCache.fillText(`S:${Math.round(s)}m`, 0, 0);
-                    ctxCache.restore();
-                }
+                ctxCache.beginPath(); ctxCache.moveTo(x, transY - rngZ * escalaGlobal); ctxCache.lineTo(x, transY + 10); ctxCache.stroke();
+                
+                ctxCache.save();
+                ctxCache.translate(x, transY + 18);
+                ctxCache.rotate(-Math.PI / 4); 
+                ctxCache.textAlign = "right";
+                ctxCache.textBaseline = "middle";
+                ctxCache.fillText(`S:${Math.round(s)}m`, 0, 0);
+                ctxCache.restore();
             }
-
-            // Marco del Viewport principal
-            ctxCache.strokeStyle = "rgba(255, 255, 255, 0.2)";
-            ctxCache.lineWidth = 1.5;
-            ctxCache.strokeRect(vpLeft, vpTop, w_canvas, h_canvas);
-
-            // Dibujar perfil geofísico recortado limpiamente en el Viewport (Clipping)
-            ctxCache.save();
-            ctxCache.beginPath();
-            ctxCache.rect(vpLeft, vpTop, w_canvas, h_canvas);
-            ctxCache.clip();
 
             const screenWidth = rngS * escalaGlobal;
             const screenHeight = rngZ * escalaGlobal;
             ctxCache.drawImage(rawMeshCanvas, transX, transY - screenHeight, screenWidth, screenHeight);
+            ctxCache.restore();
             
-            ctxCache.restore();
-            ctxCache.restore();
+            // Dibujar cruz inamovible
             dibu2D();
         }
 
@@ -1397,124 +1435,67 @@
             if (dataProyeccion2D) {
                 ctx2D.drawImage(canvas2DCache, 0, 0);
 
-                if (clickedPoint2D) {
-                    // Solo dibujar el punto si cae dentro del Viewport visible
-                    const logicalW = canvas2D.width / dpr;
-                    const logicalH = canvas2D.height / dpr;
-                    const vpLeft = 60;
-                    const vpRight = logicalW - 60;
-                    const vpTop = 40;
-                    const vpBottom = logicalH - 60;
+                ctx2D.save();
+                ctx2D.scale(dpr, dpr);
+                const logicalW = canvas2D.width / dpr;
+                const logicalH = canvas2D.height / dpr;
+                const cx = logicalW / 2;
+                const cy = logicalH / 2;
 
-                    const px = transX + (clickedPoint2D.s - dataProyeccion2D.minS) * escalaGlobal;
-                    const py = transY - (clickedPoint2D.z - dataProyeccion2D.minZ_grid) * escalaGlobal;
-
-                    if (px >= vpLeft && px <= vpRight && py >= vpTop && py <= vpBottom) {
-                        ctx2D.save();
-                        ctx2D.scale(dpr, dpr);
-                        ctx2D.strokeStyle = "#ff5252"; ctx2D.lineWidth = 2;
-                        ctx2D.beginPath(); ctx2D.arc(px, py, 10, 0, Math.PI*2); ctx2D.stroke();
-                        ctx2D.fillStyle = "#ff5252";
-                        ctx2D.beginPath(); ctx2D.arc(px, py, 3, 0, Math.PI*2); ctx2D.fill();
-                        ctx2D.restore();
-                    }
+                // Línea de plomada si está en modo "Snap" (Bloqueado)
+                if (snapS !== null) {
+                    ctx2D.strokeStyle = "rgba(255, 235, 59, 0.4)"; 
+                    ctx2D.lineWidth = 2;
+                    ctx2D.setLineDash([6, 6]);
+                    ctx2D.beginPath();
+                    ctx2D.moveTo(cx, 0); ctx2D.lineTo(cx, logicalH);
+                    ctx2D.stroke();
+                    ctx2D.setLineDash([]);
                 }
+
+                // Mira Central (Crosshair de Precisión)
+                ctx2D.strokeStyle = "rgba(255, 255, 255, 0.95)";
+                ctx2D.lineWidth = 1.5;
+                ctx2D.shadowColor = "rgba(0,0,0,0.8)";
+                ctx2D.shadowBlur = 4;
+                ctx2D.beginPath();
+                ctx2D.moveTo(cx - 16, cy); ctx2D.lineTo(cx + 16, cy);
+                ctx2D.moveTo(cx, cy - 16); ctx2D.lineTo(cx, cy + 16);
+                ctx2D.stroke();
+
+                // Punto central neón
+                ctx2D.fillStyle = "var(--accent-color)";
+                ctx2D.shadowBlur = 0;
+                ctx2D.beginPath(); ctx2D.arc(cx, cy, 2.5, 0, Math.PI*2); ctx2D.fill();
+
+                ctx2D.restore();
             }
         }
 
-        function updateCursor2D() {
+        // NUEVA FUNCIÓN QUE ACTUALIZA TODO BASADO EN EL CENTRO EXACTO DE LA PANTALLA
+        function actualizarHUDCentral() {
             if (!dataProyeccion2D || isProcessing2D) return;
 
-            // FASE 2: Forzar Mira Central Fija en el centro geométrico del Canvas lógico
-            const logicalW = canvas2D.width / dpr;
-            const logicalH = canvas2D.height / dpr;
-            cursorX = logicalW / 2;
-            cursorY = logicalH / 2;
-            isCursorActive = true;
+            const cx = (canvas2D.width / dpr) / 2;
+            const cy = (canvas2D.height / dpr) / 2;
 
-            if (snapS !== null) {
-                cursorMundoS = snapS;
-            } else {
-                cursorMundoS = dataProyeccion2D.minS + (cursorX - transX) / escalaGlobal;
-            }
-            cursorMundoZ = dataProyeccion2D.minZ_grid + (transY - cursorY) / escalaGlobal;
+            let cursorMundoS = dataProyeccion2D.minS + (cx - transX) / escalaGlobal;
+            let cursorMundoZ = dataProyeccion2D.minZ_grid + (transY - cy) / escalaGlobal;
 
-            dibu2D();
+            if (snapS !== null) cursorMundoS = snapS; // Respetar matemáticamente el bloqueo
 
-            ctx2D.save();
-            ctx2D.scale(dpr, dpr);
-
-            // FASE 2: Líneas de Cruz de Alta Visibilidad sobre la mira central fija
-            if (snapS !== null) {
-                ctx2D.strokeStyle = "#ffeb3b"; // Amarillo Neón de Alta Visibilidad
-                ctx2D.lineWidth = 2.5; 
-                ctx2D.shadowColor = "rgba(0,0,0,0.8)"; 
-                ctx2D.shadowBlur = 4;
-                ctx2D.beginPath(); ctx2D.moveTo(cursorX, 0); ctx2D.lineTo(cursorX, logicalH); ctx2D.stroke();
-                ctx2D.shadowBlur = 0; 
-            } else {
-                ctx2D.strokeStyle = "rgba(41, 182, 246, 0.8)"; 
-                ctx2D.lineWidth = 1.5; 
-                ctx2D.beginPath(); ctx2D.moveTo(cursorX, 0); ctx2D.lineTo(cursorX, logicalH); ctx2D.stroke();
-            }
-
-            ctx2D.strokeStyle = "rgba(41, 182, 246, 0.8)"; 
-            ctx2D.lineWidth = 1.5;
-            ctx2D.beginPath(); ctx2D.moveTo(0, cursorY); ctx2D.lineTo(logicalW, cursorY); ctx2D.stroke();
-
-            // Puntito central de precisión
-            ctx2D.fillStyle = "var(--accent-color)";
-            ctx2D.beginPath(); ctx2D.arc(cursorX, cursorY, 3, 0, Math.PI*2); ctx2D.fill();
-
-            ctx2D.restore();
-
-            // FASE 2: Ocultar tooltip flotante antiguo y mostrar panel lateral fijo auto-actualizable
-            if (tooltip2D) tooltip2D.style.display = 'none';
-
-            if (cursorMundoS < dataProyeccion2D.minS || cursorMundoS > dataProyeccion2D.maxS) {
-                document.getElementById('laser-info').style.display = 'none'; return;
-            }
+            dibu2D(); // Refrescar gráficos
 
             const laserInfo = document.getElementById('laser-info');
-            laserInfo.style.display = 'block';
 
-            let profTerreno = "N/A";
-            let coords = obtenerCoordenadasReales(cursorMundoS);
-            if (coords && terrenoMesh) {
-                const xScene = coords.x - centerOffset.x;
-                const yScene = coords.y - centerOffset.y;
-                const zScene = cursorMundoZ - centerOffset.z;
-                const raycaster = new THREE.Raycaster(new THREE.Vector3(xScene, yScene, 999999), new THREE.Vector3(0, 0, -1));
-                const intersects = raycaster.intersectObject(terrenoMesh, false);
-                if (intersects.length > 0) {
-                    const diff = intersects[0].point.z - zScene;
-                    profTerreno = diff >= 0 ? diff.toFixed(2) + " m" : "Por encima del terreno";
-                } else profTerreno = "Fuera de los límites";
+            // Apagar láser si miramos al vacío
+            if (cursorMundoS < dataProyeccion2D.minS || cursorMundoS > dataProyeccion2D.maxS) {
+                laserInfo.style.display = 'none';
+                laserMesh.visible = false;
+                return;
             }
 
-            const isMobile = window.innerWidth <= 768;
-            if (isMobile) {
-                laserInfo.innerHTML = `
-                    <div style="color:var(--danger-color); font-weight:bold; font-size:10px; margin-bottom:2px; letter-spacing:0.5px;">🎯 MIRA CENTRAL</div>
-                    <div style="font-size:12px; font-weight:bold; line-height:1.2;">Prof. Terreno:<br><span style="color:#81c784; font-size:14px; font-weight:900;">${profTerreno}</span></div>
-                    <div style="font-size:9px; color:#aaa; margin-top:3px; border-top:1px solid #333; padding-top:3px;">S: ${cursorMundoS.toFixed(1)} m | Z: ${cursorMundoZ.toFixed(1)} m</div>
-                `;
-            } else {
-                laserInfo.innerHTML = `
-                    <div style="color:var(--accent-color); font-weight:bold; margin-bottom:8px; border-bottom:1px solid #444; padding-bottom:5px; font-size:11px;">🎯 MIRA CENTRAL</div>
-                    Prof. al Terreno: <span class="val" style="font-size:14px; color:#81c784;">${profTerreno}</span><br>
-                    Progresiva S: <span class="val">${cursorMundoS.toFixed(2)} m</span><br>
-                    Elevación Z: <span class="val">${cursorMundoZ.toFixed(2)} m</span>
-                `;
-            }
-        }
-
-        function triggerCursorClick() {
-            if (!dataProyeccion2D || isProcessing2D) return;
-            
-            // FASE 2: El láser en 3D sigue a la Mira Fija Central de manera continua
-            clickedPoint2D = { s: cursorMundoS, z: cursorMundoZ };
-
+            // Sincronizar Esfera Roja en Escena 3D
             let coordsReales = obtenerCoordenadasReales(cursorMundoS);
             let xScene = 0, yScene = 0, zScene = 0;
 
@@ -1528,6 +1509,39 @@
                 laserMesh.position.set(xScene, yScene, zScene);
                 laserMesh.visible = true;
             }
+
+            // Raycast al Terreno para profundidad
+            let profTerreno = "N/A";
+            let colorProf = "#fff";
+            if (terrenoMesh && Number.isFinite(xScene)) {
+                const raycaster = new THREE.Raycaster(new THREE.Vector3(xScene, yScene, 999999), new THREE.Vector3(0, 0, -1));
+                const intersects = raycaster.intersectObject(terrenoMesh, false);
+                if (intersects.length > 0) {
+                    const diff = intersects[0].point.z - zScene;
+                    if (diff >= 0) {
+                        profTerreno = diff.toFixed(1) + " m";
+                        colorProf = "#81c784";
+                    } else {
+                        profTerreno = "Aire";
+                        colorProf = "#ffb74d";
+                    }
+                } else {
+                    profTerreno = "Lejos";
+                    colorProf = "#aaa";
+                }
+            } else {
+                profTerreno = "Sin Terreno";
+                colorProf = "#aaa";
+            }
+
+            // Actualizar interfaz HUD
+            document.getElementById('hud-s').innerText = cursorMundoS.toFixed(1) + " m";
+            document.getElementById('hud-z').innerText = cursorMundoZ.toFixed(1) + " m";
+            const elProf = document.getElementById('hud-prof');
+            elProf.innerText = profTerreno;
+            elProf.style.color = colorProf;
+            
+            laserInfo.style.display = 'flex';
         }
 
         function actualizarUILista(nombre, tipo, rawData = null) {
@@ -1597,8 +1611,7 @@
                     delete perfilesCargados[nombre]; delete perfilesRawData[nombre];
                     if (activeProfileName === nombre) {
                         activeProfileName = null; dataProyeccion2D = null; currentRenderId++; isProcessing2D = false;
-                        clickedPoint2D = null; laserMesh.visible = false; document.getElementById('laser-info').style.display = 'none';
-                        document.getElementById('dpad-container').style.display = 'none'; isCursorActive = false;
+                        laserMesh.visible = false; document.getElementById('laser-info').style.display = 'none';
                         document.getElementById('active-profile-title').innerText = "[Ninguno]";
                         ctx2D.fillStyle = '#0a0a0a'; ctx2D.fillRect(0, 0, canvas2D.width, canvas2D.height);
                     }
