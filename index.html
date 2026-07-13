@@ -20,6 +20,41 @@
         body { margin: 0; overflow: hidden; background-color: var(--bg-color); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: var(--text-color); }
         #main-wrapper { display: flex; width: 100vw; height: 100vh; overflow: hidden; position: relative; }
 
+        /* Pantalla de Carga Inicial */
+        #loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: var(--bg-color);
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.5s ease, visibility 0.5s;
+        }
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(41, 182, 246, 0.1);
+            border-radius: 50%;
+            border-top-color: var(--accent-color);
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        #loading-text {
+            margin-top: 20px;
+            font-size: 13px;
+            color: #aaa;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
         #sidebar { width: var(--sidebar-width); background: var(--sidebar-bg); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; transition: width 0.3s ease; position: relative; z-index: 20; flex-shrink: 0; }
         #sidebar.collapsed { width: 0; border-right: none; }
         #sidebar-content { padding: 20px; padding-top: 60px; overflow-y: auto; flex-grow: 1; width: var(--sidebar-width); box-sizing: border-box; transition: opacity 0.2s ease; }
@@ -136,7 +171,8 @@
             
             #active-profile-title { max-width: 80px; overflow: hidden; text-overflow: ellipsis; }
             
-            #laser-info { gap: 15px; padding: 8px 20px; border-radius: 30px; bottom: 15px; }
+            /* Ajustes del panelsito HUD en móvil: se eleva para evitar obstrucción y mejorar accesibilidad */
+            #laser-info { gap: 15px; padding: 8px 20px; border-radius: 30px; bottom: 80px; }
             .hud-label { font-size: 8px; }
             .hud-value { font-size: 12px; }
             .hud-value.highlight { font-size: 14px; }
@@ -153,6 +189,12 @@
     </script>
 </head>
 <body>
+
+    <!-- Contenedor Pantalla de Carga -->
+    <div id="loading-screen">
+        <div class="spinner"></div>
+        <div id="loading-text">Cargando Datos Geofísicos...</div>
+    </div>
 
     <div id="main-wrapper">
         <div id="sidebar" class="collapsed">
@@ -215,7 +257,7 @@
                     </div>
                 </div>
 
-                <!-- SECCIÓN 3: Desplegada por defecto (Limpia) -->
+                <!-- SECCIÓN 3: Desplegada por defecto -->
                 <div class="accordion-item" style="flex-grow: 1; display: flex; flex-direction: column;">
                     <div class="accordion-header active" onclick="toggleAccordion(this)">
                         <div class="accordion-title"><span class="accordion-icon">🗺️</span> 3. CAPAS ACTIVAS</div>
@@ -228,7 +270,7 @@
                     </div>
                 </div>
                 
-                <!-- SECCIÓN 4: Nueva para Progresivas TXT (Colapsada por defecto) -->
+                <!-- SECCIÓN 4: Progresivas TXT -->
                 <div class="accordion-item">
                     <div class="accordion-header" onclick="toggleAccordion(this)">
                         <div class="accordion-title"><span class="accordion-icon">🛤️</span> 4. DATOS PROGRESIVAS</div>
@@ -272,9 +314,10 @@
                 
                 <canvas id="canvas-2d" tabindex="0"></canvas>
                 
+                <!-- Panel HUD Modificado: "Progresiva (m)" en lugar de "Progresiva (S)" -->
                 <div id="laser-info">
                     <div class="hud-stat">
-                        <span class="hud-label">Progresiva (S)</span>
+                        <span class="hud-label">Progresiva (m)</span>
                         <span class="hud-value" id="hud-s">0.0 m</span>
                     </div>
                     <div class="hud-divider"></div>
@@ -317,9 +360,8 @@
         const perfilesCargados = {}; 
         const perfilesRawData = {}; 
         
-        // Estructuras para gestionar la nueva lógica TXT <-> Perfil
         const progresivasCargadas = {}; 
-        const profileToTxtMap = {}; // Guarda qué TXT pertenece a qué Perfil: { 'Perfil1.json': 'PL1.txt' }
+        const profileToTxtMap = {}; 
 
         let centerOffset = null; 
         let activeProfileName = null; 
@@ -395,41 +437,54 @@
         }
 
         async function cargarDatosPreestablecidos() {
-            fetch('terreno_web.json').then(async res => {
-                if (res.ok) {
-                    const data = await res.json();
-                    terrenoCrudoData = data; nombreArchivoTerreno = "terreno_web.json";
+            const loadingScreen = document.getElementById('loading-screen');
+            try {
+                // Descarga concurrente de terreno si está disponible
+                const resTerreno = await fetch('terreno_web.json').catch(() => null);
+                if (resTerreno && resTerreno.ok) {
+                    const data = await resTerreno.json();
+                    terrenoCrudoData = data; 
+                    nombreArchivoTerreno = "terreno_web.json";
                     construirTerreno(data, "terreno_web.json");
                 }
-            }).catch(e => console.warn(e));
 
-            const nombresPerfiles = ['Perfil1.json', 'Perfil2.json', 'Perfil3.json', 'Perfil4.json'];
-            
-            const promesasPerfiles = nombresPerfiles.map(async (nombre) => {
-                try {
-                    const resPerfil = await fetch(nombre);
-                    if (resPerfil.ok) {
-                        const dataPerfil = await resPerfil.json();
-                        construirPerfil(dataPerfil, nombre);
-                        
-                        const nombreTXT = nombre.replace('Perfil', 'PL').replace('.json', '.txt');
-                        const resTXT = await fetch(nombreTXT);
-                        if (resTXT.ok) {
-                            const txtData = await resTXT.text();
-                            procesarProgresivasTXT(txtData, nombreTXT);
+                const nombresPerfiles = ['Perfil1.json', 'Perfil2.json', 'Perfil3.json', 'Perfil4.json'];
+                
+                const promesasPerfiles = nombresPerfiles.map(async (nombre) => {
+                    try {
+                        const resPerfil = await fetch(nombre);
+                        if (resPerfil.ok) {
+                            const dataPerfil = await resPerfil.json();
+                            construirPerfil(dataPerfil, nombre);
+                            
+                            const nombreTXT = nombre.replace('Perfil', 'PL').replace('.json', '.txt');
+                            const resTXT = await fetch(nombreTXT);
+                            if (resTXT.ok) {
+                                const txtData = await resTXT.text();
+                                procesarProgresivasTXT(txtData, nombreTXT);
+                            }
+                            return { nombre, data: dataPerfil };
                         }
-                        return { nombre, data: dataPerfil };
+                    } catch (e) {
+                        console.warn(`Error al cargar preestablecido ${nombre}:`, e);
                     }
-                } catch (e) {
-                    console.warn(`Error al cargar ${nombre}:`, e);
-                }
-                return null;
-            });
+                    return null;
+                });
 
-            const resultados = await Promise.all(promesasPerfiles);
-            const primerValido = resultados.find(r => r !== null);
-            if (primerValido) {
-                activarPerfil2D(primerValido.nombre, primerValido.data);
+                const resultados = await Promise.all(promesasPerfiles);
+                const primerValido = resultados.find(r => r !== null);
+                if (primerValido) {
+                    await activarPerfil2D(primerValido.nombre, primerValido.data);
+                }
+            } catch (err) {
+                console.error("Error durante la inicialización de datos:", err);
+            } finally {
+                // Cierra la pantalla de carga de manera segura
+                if (loadingScreen) {
+                    loadingScreen.style.opacity = '0';
+                    loadingScreen.style.visibility = 'hidden';
+                    setTimeout(() => loadingScreen.remove(), 500);
+                }
             }
         }
 
@@ -454,7 +509,6 @@
                 data.sort((a,b) => a.s - b.s); 
                 progresivasCargadas[filename] = data;
                 
-                // Intentar Auto-Asignar (Ej. PL1.txt -> Perfil1.json)
                 let alt1 = filename.replace('PL', 'Perfil').replace('.txt', '.json');
                 let alt2 = filename.replace('.txt', '.json');
                 
@@ -469,7 +523,6 @@
             }
         }
 
-        // Renderiza la nueva Sección 4
         function renderListaProgresivas() {
             const container = document.getElementById('lista-progresivas');
             const txtNames = Object.keys(progresivasCargadas);
@@ -540,7 +593,6 @@
             });
         }
 
-        // Actualiza el sutil Badge "TXT" verde en la Sección 3
         function actualizarEstadoVinculoTXT() {
             for (const profileName in perfilesRawData) {
                 const safeId = profileName.replace(/[^a-zA-Z0-9]/g, '_');
@@ -1610,7 +1662,6 @@
         }
 
         function actualizarUILista(nombre, tipo, rawData = null) {
-            // Solo para terreno y perfiles, los TXT van en su propia sección
             if (tipo === 'progresiva') return;
 
             const container = document.getElementById('lista-capas');
@@ -1660,7 +1711,7 @@
                 } else if (tipo === 'perfil' && perfilesCargados[nombre]) {
                     perfilesCargados[nombre].forEach(mesh => { scene.remove(mesh); liberarMemoriaMesh(mesh); }); 
                     delete perfilesCargados[nombre]; delete perfilesRawData[nombre];
-                    delete profileToTxtMap[nombre]; // Limpiar asociación TXT
+                    delete profileToTxtMap[nombre];
                     
                     if (activeProfileName === nombre) {
                         activeProfileName = null; dataProyeccion2D = null; currentRenderId++; isProcessing2D = false;
